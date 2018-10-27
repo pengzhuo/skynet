@@ -121,9 +121,12 @@ main(int argc, char *argv[]) {
 	if (argc > 1) {
 		config_file = argv[1];
 	} else {
+		/*
 		fprintf(stderr, "Need a config file. Please read skynet wiki : https://github.com/cloudwu/skynet/wiki/Config\n"
 			"usage: skynet configfilename\n");
 		return 1;
+		*/
+		config_file = "../conf/config"
 	}
 
 	luaS_initshr();
