@@ -126,7 +126,7 @@ main(int argc, char *argv[]) {
 			"usage: skynet configfilename\n");
 		return 1;
 		*/
-		config_file = "../conf/config"
+		config_file = "../conf/config";
 	}
 
 	luaS_initshr();
