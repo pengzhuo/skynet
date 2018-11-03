@@ -85,6 +85,7 @@ typedef enum {
     T_ARR_END,
     T_STRING,
     T_NUMBER,
+    T_INT,
     T_BOOLEAN,
     T_NULL,
     T_COLON,
@@ -102,6 +103,7 @@ static const char *json_token_type_name[] = {
     "T_ARR_END",
     "T_STRING",
     "T_NUMBER",
+    "T_INT",
     "T_BOOLEAN",
     "T_NULL",
     "T_COLON",
@@ -149,6 +151,7 @@ typedef struct {
         const char *string;
         double number;
         int boolean;
+        long long integer;
     } value;
     int string_len;
 } json_token_t;
@@ -1014,18 +1017,60 @@ static int json_is_invalid_number(json_parse_t *json)
     return 0;
 }
 
+//static void json_next_number_token(json_parse_t *json, json_token_t *token)
+//{
+//    char *endptr;
+//
+//    token->type = T_NUMBER;
+//    token->value.number = fpconv_strtod(json->ptr, &endptr);
+//    if (json->ptr == endptr)
+//        json_set_token_error(token, json, "invalid number");
+//    else
+//        json->ptr = endptr;     /* Skip the processed number */
+//
+//    return;
+//}
+
 static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
-    char *endptr;
-
-    token->type = T_NUMBER;
-    token->value.number = fpconv_strtod(json->ptr, &endptr);
-    if (json->ptr == endptr)
-        json_set_token_error(token, json, "invalid number");
-    else
-        json->ptr = endptr;     /* Skip the processed number */
-
-    return;
+	char *endptr;
+	//	token->type = T_NUMBER;
+	//token->value.number
+	double value = fpconv_strtod(json->ptr, &endptr);
+	if (json->ptr == endptr)
+	{
+		token->type = T_NUMBER;
+		token->value.number = value;
+		json_set_token_error(token, json, "invalid number");
+	}
+	else
+	{
+		//scaning the str has dot-operation
+		char *start = (char*)json->ptr;
+		int is_int = 0;
+		while (start != endptr)
+		{
+			if (*start == '.')
+			{
+				//this is int
+				is_int = 1;
+				break;
+			}
+			++start;
+		}
+		if (is_int == 0)
+		{
+			token->type = T_INT;
+			token->value.integer = (long long)value;
+		}
+		else
+		{
+			token->type = T_NUMBER;
+			token->value.number = value;
+		}
+		json->ptr = endptr;     /* Skip the processed number */
+	}
+	return;
 }
 
 /* Fills in the token struct.
@@ -1241,41 +1286,74 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
     }
 }
 
+///* Handle the "value" context */
+//static void json_process_value(lua_State *l, json_parse_t *json,
+//                               json_token_t *token)
+//{
+//    switch (token->type) {
+//    case T_STRING:
+//        lua_pushlstring(l, token->value.string, token->string_len);
+//        break;;
+//    case T_NUMBER:
+//        lua_pushnumber(l, token->value.number);
+//        break;;
+//    case T_BOOLEAN:
+//        lua_pushboolean(l, token->value.boolean);
+//        break;;
+//    case T_OBJ_BEGIN:
+//        json_parse_object_context(l, json);
+//        break;;
+//    case T_ARR_BEGIN:
+//        json_parse_array_context(l, json);
+//        break;;
+//    case T_NULL:
+//        if (json->cfg->decode_lua_nil)
+//        {
+//            lua_pushnil(l);
+//        }
+//        else
+//        {
+//            /* In Lua, setting "t[k] = nil" will delete k from the table.
+//             * Hence a NULL pointer lightuserdata object is used instead */
+//            lua_pushlightuserdata(l, NULL);
+//        }
+//        break;;
+//    default:
+//        json_throw_parse_error(l, json, "value", token);
+//    }
+//}
+
 /* Handle the "value" context */
 static void json_process_value(lua_State *l, json_parse_t *json,
-                               json_token_t *token)
+	json_token_t *token)
 {
-    switch (token->type) {
-    case T_STRING:
-        lua_pushlstring(l, token->value.string, token->string_len);
-        break;;
-    case T_NUMBER:
-        lua_pushnumber(l, token->value.number);
-        break;;
-    case T_BOOLEAN:
-        lua_pushboolean(l, token->value.boolean);
-        break;;
-    case T_OBJ_BEGIN:
-        json_parse_object_context(l, json);
-        break;;
-    case T_ARR_BEGIN:
-        json_parse_array_context(l, json);
-        break;;
-    case T_NULL:
-        if (json->cfg->decode_lua_nil)
-        {
-            lua_pushnil(l);
-        }
-        else
-        {
-            /* In Lua, setting "t[k] = nil" will delete k from the table.
-             * Hence a NULL pointer lightuserdata object is used instead */
-            lua_pushlightuserdata(l, NULL);
-        }
-        break;;
-    default:
-        json_throw_parse_error(l, json, "value", token);
-    }
+	switch (token->type) {
+	case T_STRING:
+		lua_pushlstring(l, token->value.string, token->string_len);
+		break;;
+	case T_NUMBER:
+		lua_pushnumber(l, token->value.number);
+		break;;
+	case T_INT:
+		lua_pushinteger(l, token->value.integer);
+		break;;
+	case T_BOOLEAN:
+		lua_pushboolean(l, token->value.boolean);
+		break;;
+	case T_OBJ_BEGIN:
+		json_parse_object_context(l, json);
+		break;;
+	case T_ARR_BEGIN:
+		json_parse_array_context(l, json);
+		break;;
+	case T_NULL:
+		/* In Lua, setting "t[k] = nil" will delete k from the table.
+		 * Hence a NULL pointer lightuserdata object is used instead */
+		lua_pushlightuserdata(l, NULL);
+		break;;
+	default:
+		json_throw_parse_error(l, json, "value", token);
+	}
 }
 
 static int json_decode(lua_State *l)
