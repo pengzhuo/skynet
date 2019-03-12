@@ -10,3 +10,6 @@
 *.dSYM
 .DS_Store
 .idea
+!/runtime/bin/skynet
+!/runtime/libs/cservice/*.so
+!/runtime/libs/luaclib/*.so
