@@ -1,4 +1,3 @@
-/.idea
 *.o
 *.a
 /skynet
@@ -10,6 +9,4 @@
 *.so
 *.dSYM
 .DS_Store
-!/runtime/bin/skynet
-!/runtime/libs/cservice/*.so
-!/runtime/libs/luaclib/*.so
+.idea
