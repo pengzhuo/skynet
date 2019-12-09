@@ -208,6 +208,7 @@ static struct webrequest* webclient_realrequest(struct webclient* webclient, con
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, webrequest);
     curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, webrequest->error);
     curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, connect_timeout_ms);
+    curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, connect_timeout_ms);
     curl_easy_setopt(handle, CURLOPT_URL, url);
 
     if (http_post) {
