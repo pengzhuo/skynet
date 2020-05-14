@@ -65,7 +65,7 @@ LUA_CLIB_SKYNET = \
   lua-profile.c \
   lua-multicast.c \
   lua-cluster.c \
-  lua-crypt.c lmd5.c lcrc.c lsha1.c lsha2.c \
+  lua-crypt.c lmd5.c lcrc.c lsha1.c lsha2.c des.c base64.c\
   lua-sharedata.c \
   lua-stm.c \
   lua-debugchannel.c \
@@ -112,7 +112,7 @@ $(LUA_CLIB_PATH)/client.so : lualib-src/lua-clientsocket.c lualib-src/lua-crypt.
 	$(CC) $(CFLAGS) $(SHARED) $^ -o $@ -lpthread
 
 $(LUA_CLIB_PATH)/sproto.so : lualib-src/sproto/sproto.c lualib-src/sproto/lsproto.c | $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) -Ilualib-src/sproto $^ -o $@ 
+	$(CC) $(CFLAGS) $(SHARED) -Ilualib-src/sproto $^ -o $@
 
 $(LUA_CLIB_PATH)/ltls.so : lualib-src/ltls.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -Iskynet-src -L$(TLS_LIB) -I$(TLS_INC) $^ -o $@ -lssl

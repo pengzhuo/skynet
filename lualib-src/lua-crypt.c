@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "des.h"
+#include "base64.h"
+
 #define SMALL_CHUNK 256
 
 /* the eight DES S-boxes */
@@ -867,6 +870,11 @@ b64index(uint8_t c) {
 	return decoding[c];
 }
 
+/*
+    triple des
+    cbc
+    pkcs7
+*/
 static int
 lb64decode(lua_State *L) {
 	size_t sz = 0;
@@ -950,6 +958,35 @@ lxor_str(lua_State *L) {
 	return 1;
 }
 
+static int
+ldes3decode(lua_State *L) {
+    size_t content_length;
+    const char *content = (const char *)luaL_checklstring(L, 1, &content_length);
+    size_t key_length;
+    const unsigned char *key = (const unsigned char *)luaL_checklstring(L, 2, &key_length);
+    size_t iv_length;
+    const unsigned char *iv = (const unsigned char *)luaL_checklstring(L, 3, &iv_length);
+
+    size_t b64_len = BASE64_DECODE_OUT_SIZE(content_length);
+    unsigned char tmp_buff[b64_len];
+    memset(tmp_buff, 0, b64_len);
+    size_t b64_len_ex = base64_decode(content, content_length, tmp_buff);
+    size_t m_len = b64_len_ex;
+
+    unsigned char in[m_len];
+    memset(in, 0, m_len);
+    memcpy(in, tmp_buff, b64_len_ex);
+
+    char out[m_len];
+    memset(out, 0, m_len);
+
+    des3_cbc_decrypt(out, in, m_len, key, key_length, iv);
+
+    lua_pushlstring(L, out, m_len - out[m_len-1]);
+
+    return 1;
+}
+
 // defined in md5.c
 int lmd5(lua_State *L);
 int lhmac_md5(lua_State *L);
@@ -983,6 +1020,7 @@ luaopen_skynet_crypt(lua_State *L) {
 		{ "randomkey", lrandomkey },
 		{ "desencode", ldesencode },
 		{ "desdecode", ldesdecode },
+		{ "des3decode", ldes3decode },
 		{ "hexencode", ltohex },
 		{ "hexdecode", lfromhex },
 		{ "hmac64", lhmac64 },
@@ -996,7 +1034,7 @@ luaopen_skynet_crypt(lua_State *L) {
 		{ "crc32", lcrc32 },
 		{ "crc64", lcrc64 },
 		{ "sha1", lsha1 },
-    { "sha256", lsha256 },
+        { "sha256", lsha256 },
 		{ "sha512", lsha512 },
 		{ "hmac_sha1", lhmac_sha1 },
 		{ "hmac_sha256", lhmac_sha256 },
