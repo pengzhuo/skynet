@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "des.h"
-#include "base64.h"
 
 #define SMALL_CHUNK 256
 
@@ -967,22 +966,11 @@ ldes3decode(lua_State *L) {
     size_t iv_length;
     const unsigned char *iv = (const unsigned char *)luaL_checklstring(L, 3, &iv_length);
 
-    size_t b64_len = BASE64_DECODE_OUT_SIZE(content_length);
-    unsigned char tmp_buff[b64_len];
-    memset(tmp_buff, 0, b64_len);
-    size_t b64_len_ex = base64_decode(content, content_length, tmp_buff);
-    size_t m_len = b64_len_ex;
+    char out[content_length];
+    memset(out, 0, content_length);
+    des3_cbc_decrypt(out, content, content_length, key, key_length, iv);
 
-    unsigned char in[m_len];
-    memset(in, 0, m_len);
-    memcpy(in, tmp_buff, b64_len_ex);
-
-    char out[m_len];
-    memset(out, 0, m_len);
-
-    des3_cbc_decrypt(out, in, m_len, key, key_length, iv);
-
-    lua_pushlstring(L, out, m_len - out[m_len-1]);
+    lua_pushlstring(L, out, content_length - out[content_length-1]);
 
     return 1;
 }
