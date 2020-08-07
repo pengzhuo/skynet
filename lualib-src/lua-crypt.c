@@ -1111,7 +1111,6 @@ luaopen_skynet_crypt(lua_State *L) {
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, lcrypt);
-	luaL_newlib(L,l);
 
 	padding_mode_table(L);
 	lua_setfield(L, -2, "padding");
