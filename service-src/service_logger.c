@@ -9,6 +9,7 @@
 struct logger {
 	FILE * handle;
 	char * filename;
+	uint32_t starttime;
 	int close;
 };
 
@@ -31,6 +32,17 @@ logger_release(struct logger * inst) {
 	skynet_free(inst);
 }
 
+#define SIZETIMEFMT	250
+
+static int
+timestring(struct logger *inst, char tmp[SIZETIMEFMT]) {
+	uint64_t now = skynet_now();
+	time_t ti = now/100 + inst->starttime;
+	struct tm *info = localtime(&ti);
+	strftime(tmp, SIZETIMEFMT, "%D %T", info);
+	return now % 100;
+}
+
 static int
 logger_cb(struct skynet_context * context, void *ud, int type, int session, uint32_t source, const void * msg, size_t sz) {
 	struct logger * inst = ud;
@@ -50,8 +62,14 @@ logger_cb(struct skynet_context * context, void *ud, int type, int session, uint
 		}
 		break;
 	case PTYPE_TEXT:
-	    fprintf(inst->handle, "[%s] ",datetime);
-		fprintf(inst->handle, "[:%08x] ",source);
+		if (inst->filename) {
+			char tmp[SIZETIMEFMT];
+			int csec = timestring(ud, tmp);
+			fprintf(inst->handle, "%s.%02d ", tmp, csec);
+		}else{
+			fprintf(inst->handle, "[%s] ",datetime);
+		}
+		fprintf(inst->handle, "[:%08x] ", source);
 		fwrite(msg, sz , 1, inst->handle);
 		fprintf(inst->handle, "\n");
 		fflush(inst->handle);
@@ -63,6 +81,8 @@ logger_cb(struct skynet_context * context, void *ud, int type, int session, uint
 
 int
 logger_init(struct logger * inst, struct skynet_context *ctx, const char * parm) {
+	const char * r = skynet_command(ctx, "STARTTIME", NULL);
+	inst->starttime = strtoul(r, NULL, 10);
 	if (parm) {
 		inst->handle = fopen(parm,"ab");
 		if (inst->handle == NULL) {
