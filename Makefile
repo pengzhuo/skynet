@@ -54,7 +54,7 @@ update3rd :
 CSERVICE = snlua logger gate harbor
 LUA_CLIB = skynet \
   client \
-  bson md5 sproto lpeg cjson webclient snapshot serialize $(TLS_MODULE) #protobuf
+  bson md5 sproto lpeg cjson webclient zint snapshot serialize $(TLS_MODULE) #protobuf
 
 LUA_CLIB_SKYNET = \
   lua-skynet.c lua-seri.c \
@@ -64,13 +64,17 @@ LUA_CLIB_SKYNET = \
   lua-memory.c \
   lua-multicast.c \
   lua-cluster.c \
-  lua-crypt.c lmd5.c lcrc.c lsha1.c lsha2.c des.c\
+  lua-crypt.c lmd5.c lcrc.c lsha1.c lsha2.c des.c \
   lua-sharedata.c \
   lua-stm.c \
   lua-debugchannel.c \
   lua-datasheet.c \
   lua-sharetable.c \
-  \
+
+LUA_CLIB_ZINT = \
+   auspost.c 2of5.c aztec.c code.c code1.c code16k.c code49.c code128.c common.c composite.c \
+   dllversion.c dmatrix.c gridmtx.c gs1.c imail.c large.c library.c maxicode.c medical.c \
+   pdf417.c plessey.c png.c postal.c ps.c qr.c reedsol.c render.c rss.c svg.c telepen.c upcean.c zint.c
 
 SKYNET_SRC = skynet_main.c skynet_handle.c skynet_module.c skynet_mq.c \
   skynet_server.c skynet_start.c skynet_timer.c skynet_error.c \
@@ -128,12 +132,14 @@ $(LUA_CLIB_PATH)/cjson.so : 3rd/cjson/lua_cjson.c 3rd/cjson/fpconv.c 3rd/cjson/s
 $(LUA_CLIB_PATH)/serialize.so : 3rd/serialize/serialize.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/serialize $^ -o $@
 
-
 $(LUA_CLIB_PATH)/webclient.so : 3rd/lua-webclient/webclient.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/lua-webclient/webclient $^ -o $@ -lcurl
 
 $(LUA_CLIB_PATH)/snapshot.so : 3rd/lua-snapshot/snapshot.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/snapshot $^ -o $@
+
+$(LUA_CLIB_PATH)/zint.so : $(addprefix 3rd/zint/,$(LUA_CLIB_ZINT)) | $(LUA_CLIB_PATH)
+	$(CC) $(CFLAGS) $(SHARED) -I3rd/zint $^ -o $@ -lpng
 
 clean :
 	rm -f $(SKYNET_BUILD_PATH)/skynet $(CSERVICE_PATH)/*.so $(LUA_CLIB_PATH)/*.so
