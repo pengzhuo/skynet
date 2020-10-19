@@ -298,11 +298,7 @@ local function dispatch_wakeup()
 				local tag = session_coroutine_tracetag[co]
 				if tag then c.trace(tag, "resume") end
 				session_id_coroutine[session] = "BREAK"
-<<<<<<< HEAD
-				return suspend(co, coroutine_resume(co, false, "BREAK"))
-=======
 				return suspend(co, coroutine_resume(co, false, "BREAK", nil, session))
->>>>>>> github/master
 			end
 		else
 			break

@@ -4,13 +4,9 @@ local table = require "table"
 local packbytes
 local packvalue
 
-<<<<<<< HEAD
-if _VERSION == "Lua 5.4" then
-=======
 local version = _VERSION:match "5.*"
 
 if version and tonumber(version) >= 5.3 then
->>>>>>> github/master
 	function packbytes(str)
 		return string.pack("<s4",str)
 	end
