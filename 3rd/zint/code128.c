@@ -83,16 +83,17 @@ int parunmodd(uint8_t llyth)
  */
 void grwp(int *indexliste)
 {
+    int i, j;
 	if (*indexliste <= 1)
 		return;
 
-	for (int i = 1; i < *indexliste; i++) {
+	for (i = 1; i < *indexliste; i++) {
 		if (list[1][i - 1] == list[1][i]) {
 			/* bring together */
 			list[0][i - 1] = list[0][i - 1] + list[0][i];
 
 			/* decreace the list */
-			for (int j = i + 1; j < *(indexliste); j++) {
+			for (j = i + 1; j < *(indexliste); j++) {
 				list[0][j - 1] = list[0][j];
 				list[1][j - 1] = list[1][j];
 			}
@@ -108,8 +109,9 @@ void grwp(int *indexliste)
 void dxsmooth(int *indexliste)
 {
 	int current, length, last, next;
+	int i;
 
-	for (int i = 0; i < *indexliste; i++) {
+	for (i = 0; i < *indexliste; i++) {
 		current = list[1][i];
 		length = list[0][i];
 
@@ -917,7 +919,7 @@ int ean_128(struct zint_symbol *symbol, uint8_t source[], int length)
 
 	/* Add the separator pattern for composite symbols */
 	if (symbol->symbology == BARCODE_EAN128_CC) {
-		for (int i = 0; i < symbol->width; i++) {
+		for (i = 0; i < symbol->width; i++) {
 			if (!(module_is_set(symbol, separator_row + 1, i))) {
 				set_module(symbol, separator_row, i);
 			}

@@ -67,15 +67,16 @@ const int C16KStopValues[16] = {0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 0, 1, 2, 3};
 
 void grwp16(int *indexliste)
 {
+    int i, j;
 	/* bring together same type blocks */
 	if(*(indexliste) > 1) {
-		for (int i = 1; i < *indexliste; i++) {
+		for (i = 1; i < *indexliste; i++) {
 			if(list[1][i - 1] == list[1][i]) {
 				/* bring together */
 				list[0][i - 1] = list[0][i - 1] + list[0][i];
 
 				/* decreace the list */
-				for (int j = i + 1 ;j < *indexliste; j++) {
+				for (j = i + 1 ;j < *indexliste; j++) {
 					list[0][j - 1] = list[0][j];
 					list[1][j - 1] = list[1][j];
 				}

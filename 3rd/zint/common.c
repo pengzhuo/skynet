@@ -82,8 +82,8 @@ char itoc(int source)
 void to_upper(uint8_t source[])
 {
 	unsigned int src_len = ustrlen(source);
-
-	for (unsigned int i = 0; i < src_len; i++) {
+    unsigned int i;
+	for (i = 0; i < src_len; i++) {
 		if ((source[i] >= 'a') && (source[i] <= 'z')) {
 			source[i] = (source[i] - 'a') + 'A'; }
 	}
@@ -93,10 +93,10 @@ int is_sane(char test_string[], uint8_t source[], int length)
 { /* Verifies that a string only uses valid characters */
 	unsigned int latch;
 	unsigned int lt = strlen(test_string);
-    unsigned int i;
+    unsigned int i, j;
 	for(i = 0; i < length; i++) {
 		latch = FALSE;
-		for(unsigned int j = 0; j < lt; j++) {
+		for(j = 0; j < lt; j++) {
 			if (source[i] == test_string[j]) {
 				latch = TRUE;
 				break;

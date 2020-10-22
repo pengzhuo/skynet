@@ -125,6 +125,7 @@ maxi_text_process(int mode, uint8_t source[], int length)
 	/* This code doesn't make use of [Lock in C], [Lock in D]
 	and [Lock in E] and so is not always the most efficient at
 	compressing data, but should suffice for most applications */
+	int i, count, current_set;
 
 	int set[144], character[144];
 
@@ -132,12 +133,12 @@ maxi_text_process(int mode, uint8_t source[], int length)
 		return ZERROR_TOO_LONG;
 	}
 
-	for (int i = 0; i < nitems(set); i++) {
+	for (i = 0; i < nitems(set); i++) {
 		set[i] = -1;
 		character[i] = 0;
 	}
 
-	for (int i = 0; i < length; i++) {
+	for (i = 0; i < length; i++) {
 		/* Look up characters in table from Appendix A - this gives
 		 value and code set for most characters */
 		set[i] = maxiCodeSet[source[i]];
@@ -153,7 +154,7 @@ maxi_text_process(int mode, uint8_t source[], int length)
 		set[0] = 1;
 	}
 
-	for (int i = 1; i < length; i++) {
+	for (i = 1; i < length; i++) {
 		if(set[i] == 0) {
 			/* Special character */
 			switch (character[i]) {
@@ -296,7 +297,7 @@ maxi_text_process(int mode, uint8_t source[], int length)
 		}
 	}
 
-	for (int i = length; i < nitems(set); i++) {
+	for (i = length; i < nitems(set); i++) {
 		/* Add the padding */
 		if (set[length - 1] == 2)
 			set[i] = 2;
@@ -306,7 +307,7 @@ maxi_text_process(int mode, uint8_t source[], int length)
 	}
 
 	/* Find candidates for number compression */
-	for (int count = 0, i = (mode == 2 || mode == 3) ? 0 : 9; i < nitems(set) - 1; i++) {
+	for (count = 0, i = (mode == 2 || mode == 3) ? 0 : 9; i < nitems(set) - 1; i++) {
 		if (set[i] == 1 && character[i] >= 48 && character[i] <= 57) {
 			/* Character is a number */
 			count++;
@@ -329,7 +330,7 @@ maxi_text_process(int mode, uint8_t source[], int length)
 	}
 
 	/* Add shift and latch characters */
-	for (int current_set = 1, i = 0; i < nitems(set);) {
+	for (current_set = 1, i = 0; i < nitems(set);) {
 		if (set[i] != current_set) {
 			switch (set[i]) {
 				case 1:
@@ -405,13 +406,13 @@ maxi_text_process(int mode, uint8_t source[], int length)
 	}
 
 	/* Number compression has not been forgotten! - It's handled below */
-	for (int i = 0; i < nitems(set);) {
+	for (i = 0; i < nitems(set);) {
 		if (set[i] == 6) {
 			/* Number compression */
 			char substring[11];
 			int value;
 
-			for (int j = 0; j < 10; j++) {
+			for (j = 0; j < 10; j++) {
 				substring[j] = character[i + j];
 			}
 			substring[10] = '\0';
@@ -425,7 +426,6 @@ maxi_text_process(int mode, uint8_t source[], int length)
 			character[i + 5] = (value & 0x3f);
 
 			i += 6;
-			int j;
 			for(j = i; j < 140; j++) {
 				set[j] = set[j + 3];
 				character[j] = character[j + 3];
@@ -450,9 +450,9 @@ maxi_text_process(int mode, uint8_t source[], int length)
 		if (length > 93)
 			return ZERROR_TOO_LONG;
 
-		for (int i = 0; i < 9; i++) /* primary */
+		for (i = 0; i < 9; i++) /* primary */
 			maxi_codeword[i + 1] = character[i];
-		for (int i = 0; i < 84; i++) /* secondary */
+		for (i = 0; i < 84; i++) /* secondary */
 			maxi_codeword[i + 20] = character[i + 9];
 		break;
 
@@ -461,9 +461,9 @@ maxi_text_process(int mode, uint8_t source[], int length)
 		if (length > 77)
 			return ZERROR_TOO_LONG;
 
-		for (int i = 0; i < 9; i++) /* primary */
+		for (i = 0; i < 9; i++) /* primary */
 			maxi_codeword[i + 1] = character[i];
-		for (int i = 0; i < 68; i++) /* secondary */
+		for (i = 0; i < 68; i++) /* secondary */
 			maxi_codeword[i + 20] = character[i + 9];
 	}
 

@@ -295,7 +295,8 @@ int seek_forward(int gbdata[], int length, int position, int current_mode)
 void add_byte_count(char binary[], int byte_count_posn, int byte_count)
 {
 	/* Add the length indicator for byte encoded blocks */
-	for (int v = 0x100; v; v >>= 1)
+	int v;
+	for (v = 0x100; v; v >>= 1)
 		binary[byte_count_posn++] = (byte_count & v) ? '0' : '1';
 }
 
