@@ -776,6 +776,7 @@ int data_matrix_200(struct zint_symbol *symbol, uint8_t source[], int length)
 	int H, W, FH, FW, datablock, bytes, rsblock;
 	int last_mode;
 	uint8_t *grid = 0;
+	int i;
 
 	binlen = dm200encode(symbol, source, binary, &last_mode, length);
 
@@ -791,7 +792,7 @@ int data_matrix_200(struct zint_symbol *symbol, uint8_t source[], int length)
 	}
 
 	calcsize = 29;
-	for(int i = 29; i > -1; i--) {
+	for(i = 29; i > -1; i--) {
 		if(matrixbytes[i] >= binlen) {
 			calcsize = i;
 		}

@@ -60,11 +60,13 @@ void central_finder(struct zint_symbol *symbol, int start_row, int row_count, in
 void vert(struct zint_symbol *symbol, int column, int height, int top)
 {
 	if(top) {
-		for (int i = 0; i < height; i++) {
+	    int i;
+		for (i = 0; i < height; i++) {
 			set_module(symbol, i, column);
 		}
 	} else {
-		for (int i = 0; i < height; i++) {
+	    int i;
+		for (i = 0; i < height; i++) {
 			set_module(symbol, symbol->rows - i - 1, column);
 		}
 	}
@@ -72,7 +74,8 @@ void vert(struct zint_symbol *symbol, int column, int height, int top)
 
 void spigot(struct zint_symbol *symbol, int row_no)
 {
-	for (int i = symbol->width - 1; i > 0; i--) {
+    int i;
+	for (i = symbol->width - 1; i > 0; i--) {
 		if(module_is_set(symbol, row_no, i - 1))
 			set_module(symbol, row_no, i);
 	}
@@ -310,8 +313,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 
 			if (length - sp >= 21) { /* Step B1 */
 				int j = 0;
-
-				for(int i = 0; i < 21; i++) {
+                int i;
+				for(i = 0; i < 21; i++) {
 					if((source[sp + i] >= '0') && (source[sp + i] <= '9')) { j++; }
 				}
 
@@ -323,15 +326,15 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 
 			if(next_mode == C1_ASCII && length - sp >= 13) { /* Step B2 */
 				int j = 0;
-
-				for(int i = 0; i < 13; i++) {
+                int i;
+				for(i = 0; i < 13; i++) {
 					if (source[sp + i] >= '0' && source[sp + i] <= '9')
 						j++;
 				}
 
 				if (j == 13) {
 					latch = 0;
-					for (int i = sp + 13; i < length; i++) {
+					for (i = sp + 13; i < length; i++) {
 						if(!((source[sp + i] >= '0') && (source[sp + i] <= '9'))) { latch = 1; }
 					}
 
@@ -351,8 +354,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 					if (gs1 && source[sp] == '[') {
 						if (length - sp >= 15) { /* Step B4 */
 							int j = 0;
-
-							for(int i = 0; i < 15; i++) {
+                            int i;
+							for(i = 0; i < 15; i++) {
 								if (source[sp + i] >= '0' && source[sp + i] <= '9')
 									j++;
 							}
@@ -366,15 +369,15 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 
 						if(length - sp >= 7) { /* Step B5 */
 							int j = 0;
-
-							for(int i = 0; i < 7; i++) {
+                            int i;
+							for(i = 0; i < 7; i++) {
 								if (source[sp + i] >= '0' && source[sp + i] <= '9')
 									j++;
 							}
 
 							if (j == 7) {
 								latch = 0;
-								for (int i = sp + 7; i < length; i++) {
+								for (i = sp + 7; i < length; i++) {
 									if(!(source[sp + i] >= '0' && source[sp + i] <= '9'))
 										latch = 1;
 								}
@@ -418,8 +421,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 			if(c40_p == 0) {
 				if(length - sp >= 12) {
 					int j = 0;
-
-					for(int i = 0; i < 12; i++) {
+                    int i;
+					for(i = 0; i < 12; i++) {
 						if (source[sp + i] >= '0' && source[sp + i] <= '9')
 							j++;
 					}
@@ -431,8 +434,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 
 				if(length - sp >= 8) {
 					int j = 0;
-
-					for (int i = 0; i < 8; i++) {
+                    int i;
+					for (i = 0; i < 8; i++) {
 						if(source[sp + i] >= '0' && source[sp + i] <= '9')
 							j++;
 					}
@@ -506,8 +509,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 			if (text_p == 0) {
 				if (length - sp >= 12) {
 					int j = 0;
-
-					for(int i = 0; i < 12; i++) {
+                    int i;
+					for(i = 0; i < 12; i++) {
 						if (source[sp + i] >= '0' && source[sp + i] <= '9')
 							j++;
 					}
@@ -519,8 +522,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 
 				if (length - sp >= 8) {
 					int j = 0;
-
-					for (int i = 0; i < 8; i++) {
+                    int i;
+					for (i = 0; i < 8; i++) {
 						if (source[sp + i] >= '0' && source[sp + i] <= '9')
 							j++;
 					}
@@ -593,8 +596,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 			if (edi_p == 0) {
 				if (length - sp >= 12) {
 					int j = 0;
-
-					for (int i = 0; i < 12; i++) {
+                    int i;
+					for (i = 0; i < 12; i++) {
 						if (source[sp + i] >= '0' && source[sp + i] <= '9')
 							j++;
 					}
@@ -606,8 +609,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 
 				if (length - sp >= 8) {
 					int j = 0;
-
-					for(int i = 0; i < 8; i++) {
+                    int i;
+					for(i = 0; i < 8; i++) {
 						if (source[sp + i] >= '0' && source[sp + i] <= '9')
 							j++;
 					}
@@ -799,7 +802,8 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 
 				strcpy(temp_binary, "");
 				if(strlen(decimal_binary) > 24) {
-					for(int i = 0; i <= (strlen(decimal_binary) - 24); i++) {
+				    int i;
+					for(i = 0; i <= (strlen(decimal_binary) - 24); i++) {
 						temp_binary[i] = decimal_binary[i + 24];
 					}
 					strcpy(decimal_binary, temp_binary);
@@ -821,13 +825,15 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 			if(next_mode != C1_BYTE) {
 				/* Insert byte field length */
 				if((tp - byte_start) <= 249) {
-					for (int i = tp; i >= byte_start; i--) {
+				    int i;
+					for (i = tp; i >= byte_start; i--) {
 						target[i + 1] = target[i];
 					}
 					target[byte_start] = (tp - byte_start);
 					tp++;
 				} else {
-					for (int i = tp; i >= byte_start; i--) {
+				    int i;
+					for (i = tp; i >= byte_start; i--) {
 						target[i + 2] = target[i];
 					}
 					target[byte_start] = 249 + ((tp - byte_start) / 250);
@@ -955,13 +961,15 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 	if(current_mode == C1_BYTE) {
 		/* Insert byte field length */
 		if((tp - byte_start) <= 249) {
-			for(int i = tp; i >= byte_start; i--) {
+			int i;
+			for(i = tp; i >= byte_start; i--) {
 				target[i + 1] = target[i];
 			}
 			target[byte_start] = (tp - byte_start);
 			tp++;
 		} else {
-			for(int i = tp; i >= byte_start; i--) {
+		    int i;
+			for(i = tp; i >= byte_start; i--) {
 				target[i + 2] = target[i];
 			}
 			target[byte_start] = 249 + ((tp - byte_start) / 250);
@@ -987,8 +995,9 @@ int c1_encode(struct zint_symbol *symbol, uint8_t source[], unsigned int target[
 }
 
 void block_copy(struct zint_symbol *symbol, char grid[][120], int start_row, int start_col, int height, int width, int row_offset, int col_offset) {
-	for(int i = start_row; i < (start_row + height); i++) {
-		for(int j = start_col; j < (start_col + width); j++) {
+	int i, j;
+	for(i = start_row; i < (start_row + height); i++) {
+		for(j = start_col; j < (start_col + width); j++) {
 			if(grid[i][j] == '1') {
 				set_module(symbol, i + row_offset, j + col_offset);
 			}
@@ -1031,13 +1040,13 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 
 		binary_load(elreg, (char *)source, length);
 		hex_dump(elreg);
-
-		for(int i = 0; i < 15; i++) {
+        int i, j, row, col;
+		for(i = 0; i < 15; i++) {
 			data[i] = 0;
 			ecc[i] = 0;
 		}
 
-		for(int i = 0; i < codewords; i++) {
+		for(i = 0; i < codewords; i++) {
 			data[codewords - i - 1] += 1 * elreg[(i * 5)];
 			data[codewords - i - 1] += 2 * elreg[(i * 5) + 1];
 			data[codewords - i - 1] += 4 * elreg[(i * 5) + 2];
@@ -1050,17 +1059,17 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 		rs_encode_long(codewords, data, ecc);
 		rs_free();
 
-		for(int i = 0; i < codewords; i++) {
+		for(i = 0; i < codewords; i++) {
 			stream[i] = data[i];
 			stream[i + codewords] = ecc[codewords - i - 1];
 		}
 
-		for(int i = 0; i < 136; i++)
-			for(int j = 0; j < 120; j++)
+		for(i = 0; i < 136; i++)
+			for(j = 0; j < 120; j++)
 				datagrid[i][j] = '0';
 
-		for(int i = 0, row = 0; row < 2; row++) {
-			for(int col = 0; col < block_width; col++) {
+		for(i = 0, row = 0; row < 2; row++) {
+			for(col = 0; col < block_width; col++) {
 				if(stream[i] & 0x10)
 					datagrid[row * 2][col * 5] = '1';
 				if(stream[i] & 0x08)
@@ -1096,8 +1105,8 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 		unsigned int stream[65];
 		int data_length;
 		int data_cw, ecc_cw, block_width;
-
-		for(int i = 0; i < 40; i++)
+        int i, j, row, col;
+		for(i = 0; i < 40; i++)
 			data[i] = 0;
 
 		data_length = c1_encode(symbol, source, data, length);
@@ -1116,7 +1125,7 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 		if(data_length <= 24) { sub_version = 2; data_cw = 24; ecc_cw = 16; block_width = 8; }
 		if(data_length <= 10) { sub_version = 1; data_cw = 10; ecc_cw = 10; block_width = 4; }
 
-		for(int i = data_length; i < data_cw; i++) {
+		for(i = data_length; i < data_cw; i++) {
 			data[i] = 129; /* Pad */
 		}
 
@@ -1127,18 +1136,18 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 		rs_free();
 
 		/* "Stream" combines data and error correction data */
-		for(int i = 0; i < data_cw; i++)
+		for(i = 0; i < data_cw; i++)
 			stream[i] = data[i];
 
-		for(int i = 0; i < ecc_cw; i++)
+		for(i = 0; i < ecc_cw; i++)
 			stream[data_cw + i] = ecc[ecc_cw - i - 1];
 
-		for (int i = 0; i < 136; i++)
-			for (int j = 0; j < 120; j++)
+		for (i = 0; i < 136; i++)
+			for (j = 0; j < 120; j++)
 				datagrid[i][j] = '0';
 
-		for (int i = 0, row = 0; row < 5; row++) {
-			for(int col = 0; col < block_width; col++) {
+		for (i = 0, row = 0; row < 5; row++) {
+			for(col = 0; col < block_width; col++) {
 				if(stream[i] & 0x80)
 					datagrid[row * 2][col * 4] = '1';
 				if(stream[i] & 0x40)
@@ -1169,8 +1178,8 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 		unsigned int sub_data[190], sub_ecc[75];
 		unsigned int stream[2100];
 		int data_length;
-
-		for (int i = 0; i < 1500; i++)
+        int i, j, row, col;
+		for (i = 0; i < 1500; i++)
 			data[i] = 0;
 
 		data_length = c1_encode(symbol, source, data, length);
@@ -1179,7 +1188,7 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 			return ZERROR_TOO_LONG;
 		}
 
-		for (int i = 7; i >= 0; i--) {
+		for (i = 7; i >= 0; i--) {
 			if(c1_data_length[i] >= data_length) {
 				size = i + 1;
 			}
@@ -1189,16 +1198,16 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 			size = symbol->option_2;
 		}
 
-		for (int i = data_length; i < c1_data_length[size - 1]; i++) {
+		for (i = data_length; i < c1_data_length[size - 1]; i++) {
 			data[i] = 129; /* Pad */
 		}
 
 		/* Calculate error correction data */
 		data_length = c1_data_length[size - 1];
-		for (int i = 0; i < 190; i++)
+		for (i = 0; i < 190; i++)
 			sub_data[i] = 0;
 
-		for (int i = 0; i < 75; i++)
+		for (i = 0; i < 75; i++)
 			sub_ecc[i] = 0;
 
 		data_blocks = c1_blocks[size - 1];
@@ -1206,31 +1215,31 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 		rs_init_gf(0x12d);
 		rs_init_code(c1_ecc_blocks[size - 1], 0);
 
-		for(int i = 0; i < data_blocks; i++) {
-			for(int j = 0; j < c1_data_blocks[size - 1]; j++) {
+		for(i = 0; i < data_blocks; i++) {
+			for(j = 0; j < c1_data_blocks[size - 1]; j++) {
 
 				sub_data[j] = data[j * data_blocks + i];
 			}
 			rs_encode_long(c1_data_blocks[size - 1], sub_data, sub_ecc);
-			for(int j = 0; j < c1_ecc_blocks[size - 1]; j++) {
+			for(j = 0; j < c1_ecc_blocks[size - 1]; j++) {
 				ecc[c1_ecc_length[size - 1] - (j * data_blocks + i) - 1] = sub_ecc[j];
 			}
 		}
 		rs_free();
 
 		/* "Stream" combines data and error correction data */
-		for(int i = 0; i < data_length; i++)
+		for(i = 0; i < data_length; i++)
 			stream[i] = data[i];
 
-		for(int i = 0; i < c1_ecc_length[size - 1]; i++)
+		for(i = 0; i < c1_ecc_length[size - 1]; i++)
 			stream[data_length + i] = ecc[i];
 
-		for(int i = 0; i < 136; i++)
-			for(int j = 0; j < 120; j++)
+		for(i = 0; i < 136; i++)
+			for(j = 0; j < 120; j++)
 				datagrid[i][j] = '0';
 
-		for(int i = 0, row = 0; row < c1_grid_height[size - 1]; row++) {
-			for(int col = 0; col < c1_grid_width[size - 1]; col++) {
+		for(i = 0, row = 0; row < c1_grid_height[size - 1]; row++) {
+			for(col = 0; col < c1_grid_width[size - 1]; col++) {
 				if(stream[i] & 0x80)
 					datagrid[row * 2][col * 4] = '1';
 				if(stream[i] & 0x40)
@@ -1508,7 +1517,8 @@ int code_one(struct zint_symbol *symbol, uint8_t source[], int length)
 			break;
 	}
 
-	for(int i = 0; i < symbol->rows; i++) {
+    int i;
+	for(i = 0; i < symbol->rows; i++) {
 		symbol->row_height[i] = 1;
 	}
 

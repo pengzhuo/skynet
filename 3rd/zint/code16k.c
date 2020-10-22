@@ -89,8 +89,8 @@ void grwp16(int *indexliste)
 void dxsmooth16(int *indexliste)
 { /* Implements rules from ISO 15417 Annex E */
 	int current, last, next, length;
-
-	for(int i = 0; i < *indexliste; i++) {
+    int i;
+	for(i = 0; i < *indexliste; i++) {
 		current = list[1][i];
 		length = list[0][i];
 

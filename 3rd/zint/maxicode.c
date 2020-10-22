@@ -425,7 +425,8 @@ maxi_text_process(int mode, uint8_t source[], int length)
 			character[i + 5] = (value & 0x3f);
 
 			i += 6;
-			for(int j = i; j < 140; j++) {
+			int j;
+			for(j = i; j < 140; j++) {
 				set[j] = set[j + 3];
 				character[j] = character[j + 3];
 			}
@@ -473,8 +474,8 @@ void maxi_do_primary_2(char postcode[], int country, int service)
 {
 	/* Format structured primary for Mode 2 */
 	int postcode_length, postcode_num;
-
-	for(int i = 0; i < 10; i++) {
+    int i;
+	for(i = 0; i < 10; i++) {
 		if((postcode[i] < '0') || (postcode[i] > '9')) {
 			postcode[i] = '\0';
 		}

@@ -93,8 +93,8 @@ int is_sane(char test_string[], uint8_t source[], int length)
 { /* Verifies that a string only uses valid characters */
 	unsigned int latch;
 	unsigned int lt = strlen(test_string);
-
-	for(unsigned int i = 0; i < length; i++) {
+    unsigned int i;
+	for(i = 0; i < length; i++) {
 		latch = FALSE;
 		for(unsigned int j = 0; j < lt; j++) {
 			if (source[i] == test_string[j]) {
@@ -113,8 +113,8 @@ int is_sane(char test_string[], uint8_t source[], int length)
 int posn(char set_string[], char data)
 { /* Returns the position of data in set_string */
 	unsigned int n = strlen(set_string);
-
-	for(unsigned int i = 0; i < n; i++)
+    unsigned int i;
+	for(i = 0; i < n; i++)
 		if (data == set_string[i])
 			return i;
 	return 0;
@@ -124,8 +124,8 @@ int posn(char set_string[], char data)
 void lookup(char set_string[], const char *table[], char data, char dest[])
 {
 	unsigned int n = strlen(set_string);
-
-	for(unsigned int i = 0; i < n; i++)
+    unsigned int i;
+	for(i = 0; i < n; i++)
 		if (data == set_string[i])
 			concat(dest, table[i]);
 }
@@ -151,12 +151,13 @@ void expand(struct zint_symbol *symbol, char data[])
 	unsigned int reader, n = strlen(data);
 	int writer;
 	char latch;
+	int i;
 
 	writer = 0;
 	latch = '1';
 
 	for(reader = 0; reader < n; reader++) {
-		for(int i = 0; i < ctoi(data[reader]); i++) {
+		for(i = 0; i < ctoi(data[reader]); i++) {
 			if(latch == '1') { set_module(symbol, symbol->rows, writer); }
 			writer++;
 		}

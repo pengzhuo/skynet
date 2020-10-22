@@ -45,6 +45,7 @@ int matrix_two_of_five(struct zint_symbol *symbol, uint8_t source[], int length)
 
 	int error_number;
 	char dest[512]; /* 6 + 80 * 6 + 6 + 1 ~ 512*/
+	int i;
 
 	error_number = 0;
 
@@ -61,7 +62,7 @@ int matrix_two_of_five(struct zint_symbol *symbol, uint8_t source[], int length)
 	/* start character */
 	strcpy(dest, "411111");
 
-	for(int i = 0; i < length; i++) {
+	for(i = 0; i < length; i++) {
 		lookup(NEON, C25MatrixTable, source[i], dest);
 	}
 
@@ -78,6 +79,7 @@ int industrial_two_of_five(struct zint_symbol *symbol, uint8_t source[], int len
 
 	int error_number;
 	char dest[512]; /* 6 + 40 * 10 + 6 + 1 */
+	int i;
 
 	error_number = 0;
 
@@ -94,7 +96,7 @@ int industrial_two_of_five(struct zint_symbol *symbol, uint8_t source[], int len
 	/* start character */
 	strcpy(dest, "313111");
 
-	for(int i = 0; i < length; i++) {
+	for(i = 0; i < length; i++) {
 		lookup(NEON, C25IndustTable, source[i], dest);
 	}
 
@@ -110,6 +112,7 @@ int iata_two_of_five(struct zint_symbol *symbol, uint8_t source[], int length)
 { /* Code 2 of 5 IATA */
 	int error_number;
 	char dest[512]; /* 4 + 45 * 10 + 3 + 1 */
+	int i;
 
 	error_number = 0;
 
@@ -126,7 +129,7 @@ int iata_two_of_five(struct zint_symbol *symbol, uint8_t source[], int length)
 	/* start */
 	strcpy(dest, "1111");
 
-	for(int i = 0; i < length; i++) {
+	for(i = 0; i < length; i++) {
 		lookup(NEON, C25IndustTable, source[i], dest);
 	}
 
@@ -143,6 +146,7 @@ int logic_two_of_five(struct zint_symbol *symbol, uint8_t source[], int length)
 
 	int error_number;
 	char dest[512]; /* 4 + 80 * 6 + 3 + 1 */
+	int i;
 
 	error_number = 0;
 
@@ -159,7 +163,7 @@ int logic_two_of_five(struct zint_symbol *symbol, uint8_t source[], int length)
 	/* start character */
 	strcpy(dest, "1111");
 
-	for(int i = 0; i < length; i++) {
+	for(i = 0; i < length; i++) {
 		lookup(NEON, C25MatrixTable, source[i], dest);
 	}
 
@@ -177,6 +181,7 @@ int interleaved_two_of_five(struct zint_symbol *symbol, uint8_t source[], int le
 	int error_number;
 	char bars[7], spaces[7], mixed[14], dest[1000];
 	uint8_t temp[length + 2];
+	int i;
 
 	error_number = 0;
 
@@ -202,7 +207,7 @@ int interleaved_two_of_five(struct zint_symbol *symbol, uint8_t source[], int le
 	/* start character */
 	strcpy(dest, "1111");
 
-	for(int i = 0; i < length; i+=2) {
+	for(i = 0; i < length; i+=2) {
 		/* look up the bars and the spaces and put them in two strings */
 		strcpy(bars, "");
 		lookup(NEON, C25InterTable, temp[i], bars);
@@ -211,7 +216,8 @@ int interleaved_two_of_five(struct zint_symbol *symbol, uint8_t source[], int le
 
 		/* then merge (interlace) the strings together */
 		int k = 0;
-		for(int j = 0; j <= 4; j++)
+		int j;
+		for(j = 0; j <= 4; j++)
 		{
 			mixed[k] = bars[j]; k++;
 			mixed[k] = spaces[j]; k++;
@@ -234,6 +240,7 @@ int itf14(struct zint_symbol *symbol, uint8_t source[], int length)
 	int error_number, zeroes;
 	unsigned int count;
 	char localstr[16];
+	int i;
 
 	error_number = 0;
 
@@ -252,14 +259,14 @@ int itf14(struct zint_symbol *symbol, uint8_t source[], int length)
 
 	/* Add leading zeros as required */
 	zeroes = 13 - length;
-	for(int i = 0; i < zeroes; i++) {
+	for(i = 0; i < zeroes; i++) {
 		localstr[i] = '0';
 	}
 	strcpy(localstr + zeroes, (char *)source);
 
 	/* Calculate the check digit - the same method used for EAN-13 */
 
-	for (int i = 12; i >= 0; i--) {
+	for (i = 12; i >= 0; i--) {
 		count += ctoi(localstr[i]);
 
 		if (!(i & 1)) {
@@ -280,6 +287,7 @@ int dpleit(struct zint_symbol *symbol, uint8_t source[], int length)
 	unsigned int count;
 	char localstr[16];
 	int zeroes;
+	int i;
 
 	error_number = 0;
 	count = 0;
@@ -294,11 +302,11 @@ int dpleit(struct zint_symbol *symbol, uint8_t source[], int length)
 	}
 
 	zeroes = 13 - length;
-	for(int i = 0; i < zeroes; i++)
+	for(i = 0; i < zeroes; i++)
 		localstr[i] = '0';
 	strcpy(localstr + zeroes, (char *)source);
 
-	for (int i = 12; i >= 0; i--)
+	for (i = 12; i >= 0; i--)
 	{
 		count += 4 * ctoi(localstr[i]);
 
@@ -319,6 +327,7 @@ int dpident(struct zint_symbol *symbol, uint8_t source[], int length)
 	int error_number, zeroes;
 	unsigned int count;
 	char localstr[16];
+	int i;
 
 	count = 0;
 	if (length > 11) {
@@ -333,11 +342,11 @@ int dpident(struct zint_symbol *symbol, uint8_t source[], int length)
 	}
 
 	zeroes = 11 - length;
-	for (int i = 0; i < zeroes; i++)
+	for (i = 0; i < zeroes; i++)
 		localstr[i] = '0';
 	strcpy(localstr + zeroes, (char *)source);
 
-	for (int i = 10; i >= 0; i--)
+	for (i = 10; i >= 0; i--)
 	{
 		count += 4 * ctoi(localstr[i]);
 

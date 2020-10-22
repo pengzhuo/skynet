@@ -54,7 +54,7 @@ update3rd :
 CSERVICE = snlua logger gate harbor
 LUA_CLIB = skynet \
   client \
-  bson md5 sproto lpeg cjson webclient zint snapshot serialize Ip2region $(TLS_MODULE) #protobuf
+  bson md5 sproto lpeg cjson webclient zint snapshot serialize Ip2region zint $(TLS_MODULE) #protobuf
 
 LUA_CLIB_SKYNET = \
   lua-skynet.c lua-seri.c \
