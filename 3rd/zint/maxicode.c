@@ -411,7 +411,7 @@ maxi_text_process(int mode, uint8_t source[], int length)
 			/* Number compression */
 			char substring[11];
 			int value;
-
+            int j;
 			for (j = 0; j < 10; j++) {
 				substring[j] = character[i + j];
 			}
@@ -442,7 +442,7 @@ maxi_text_process(int mode, uint8_t source[], int length)
 			return ZERROR_TOO_LONG;
 
 		/* Copy the encoded text into the codeword array */
-		for (int i = 0; i < 84; i++) /* secondary only */
+		for (i = 0; i < 84; i++) /* secondary only */
 			maxi_codeword[i + 20] = character[i];
 		break;
 	case 4:
