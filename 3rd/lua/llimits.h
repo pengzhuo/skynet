@@ -326,7 +326,8 @@ typedef l_uint32 Instruction;
 
 /* exponentiation */
 #if !defined(luai_numpow)
-#define luai_numpow(L,a,b)      ((void)L, l_mathop(pow)(a,b))
+#define luai_numpow(L,a,b)  \
+  ((void)L, (b == 2) ? (a)*(a) : l_mathop(pow)(a,b))
 #endif
 
 /* the others are quite standard operations */
@@ -355,7 +356,7 @@ typedef l_uint32 Instruction;
 #else
 /* realloc stack keeping its size */
 #define condmovestack(L,pre,pos)  \
-  { int sz_ = (L)->stacksize; pre; luaD_reallocstack((L), sz_, 0); pos; }
+  { int sz_ = stacksize(L); pre; luaD_reallocstack((L), sz_, 0); pos; }
 #endif
 
 #if !defined(HARDMEMTESTS)
