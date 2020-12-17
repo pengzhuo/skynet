@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #define DES_ENCRYPT     1
 #define DES_DECRYPT     0
