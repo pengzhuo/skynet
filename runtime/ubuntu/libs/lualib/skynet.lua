@@ -65,7 +65,7 @@ local sleep_session = {}
 
 local watching_session = {}
 local error_queue = {}
-local fork_queue = {}
+local fork_queue = { h = 1, t = 0 }
 
 do ---- request/select
 	local function send_requests(self)
@@ -324,11 +324,14 @@ function suspend(co, result, command)
 		session_coroutine_address[co] = nil
 		session_coroutine_tracetag[co] = nil
 		skynet.fork(function() end)	-- trigger command "SUSPEND"
-		error(traceback(co,tostring(command)))
+		local tb = traceback(co,tostring(command))
+		coroutine.close(co)
+		error(tb)
 	end
 	if command == "SUSPEND" then
 		return dispatch_wakeup()
 	elseif command == "QUIT" then
+		coroutine.close(co)
 		-- service exit
 		return
 	elseif command == "USER" then
@@ -426,9 +429,12 @@ function skynet.killthread(thread)
 			end
 		end
 	else
-		for i = 1, #fork_queue do
+		local t = fork_queue.t
+		for i = fork_queue.h, t do
 			if fork_queue[i] == thread then
-				tremove(fork_queue, i)
+				table.move(fork_queue, i+1, t, i)
+				fork_queue[t] = nil
+				fork_queue.t = t - 1
 				return thread
 			end
 		end
@@ -514,13 +520,18 @@ function skynet.time()
 end
 
 function skynet.exit()
-	fork_queue = {}	-- no fork coroutine can be execute after skynet.exit
+	fork_queue = { h = 1, t = 0 }	-- no fork coroutine can be execute after skynet.exit
 	skynet.send(".launcher","lua","REMOVE",skynet.self(), false)
 	-- report the sources that call me
 	for co, session in pairs(session_coroutine_id) do
 		local address = session_coroutine_address[co]
 		if session~=0 and address then
 			c.send(address, skynet.PTYPE_ERROR, session, "")
+		end
+	end
+	for session, co in pairs(session_id_coroutine) do
+		if type(co) == "thread" then
+			coroutine.close(co)
 		end
 	end
 	for resp in pairs(unresponse) do
@@ -749,7 +760,9 @@ function skynet.fork(func,...)
 		local args = { ... }
 		co = co_create(function() func(table.unpack(args,1,n)) end)
 	end
-	tinsert(fork_queue, co)
+	local t = fork_queue.t + 1
+	fork_queue.t = t
+	fork_queue[t] = co
 	return co
 end
 
@@ -820,10 +833,18 @@ end
 function skynet.dispatch_message(...)
 	local succ, err = pcall(raw_dispatch_message,...)
 	while true do
-		local co = tremove(fork_queue,1)
-		if co == nil then
+		if fork_queue.h > fork_queue.t then
+			-- queue is empty
+			fork_queue.h = 1
+			fork_queue.t = 0
 			break
 		end
+		-- pop queue
+		local h = fork_queue.h
+		local co = fork_queue[h]
+		fork_queue[h] = nil
+		fork_queue.h = h + 1
+
 		local fork_succ, fork_err = pcall(suspend,co,coroutine_resume(co))
 		if not fork_succ then
 			if succ then
