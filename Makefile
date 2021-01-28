@@ -54,7 +54,7 @@ update3rd :
 CSERVICE = snlua logger gate harbor
 LUA_CLIB = skynet \
   client \
-  bson md5 sproto lpeg cjson webclient zint snapshot serialize Ip2region $(TLS_MODULE) #protobuf
+  bson md5 sproto lpeg cjson webclient zint snapshot serialize Ip2region $(TLS_MODULE)
 
 LUA_CLIB_SKYNET = \
   lua-skynet.c lua-seri.c \
@@ -125,9 +125,6 @@ $(LUA_CLIB_PATH)/lpeg.so : 3rd/lpeg/lpcap.c 3rd/lpeg/lpcode.c 3rd/lpeg/lpprint.c
 
 $(LUA_CLIB_PATH)/cjson.so : 3rd/cjson/lua_cjson.c 3rd/cjson/fpconv.c 3rd/cjson/strbuf.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/cjson $^ -o $@
-
-#$(LUA_CLIB_PATH)/protobuf.so : 3rd/pbc/binding/lua53/pbc-lua53.c | $(LUA_CLIB_PATH)
-#	$(CC) -O2 -fPIC -Wall -undefined dynamic_lookup -shared -o $@ -I3rd/pbc/ -I$(LUA_INC) -L3rd/pbc/build $^ -lpbc
 
 $(LUA_CLIB_PATH)/serialize.so : 3rd/serialize/serialize.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/serialize $^ -o $@
