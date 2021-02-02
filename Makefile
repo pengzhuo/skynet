@@ -103,7 +103,7 @@ endef
 $(foreach v, $(CSERVICE), $(eval $(call CSERVICE_TEMP,$(v))))
 
 $(LUA_CLIB_PATH)/skynet.so : $(addprefix lualib-src/,$(LUA_CLIB_SKYNET)) | $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) $^ -o $@ -Iskynet-src -Iservice-src -Ilualib-src
+	$(CC) $(CFLAGS) $(SHARED) -Iskynet-src -Iservice-src -Ilualib-src $^ -o $@ -lcurl -lcrypto
 
 $(LUA_CLIB_PATH)/bson.so : lualib-src/lua-bson.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -Iskynet-src $^ -o $@

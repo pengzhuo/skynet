@@ -1,6 +1,7 @@
 #define LUA_LIB
 
 #include <lua.h>
+#include <lualib.h>
 #include <lauxlib.h>
 
 #include <time.h>
@@ -8,6 +9,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include <openssl/bio.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/evp.h>
+#include <openssl/md5.h>
+#include <openssl/hmac.h>
 
 #include "des.h"
 
@@ -1072,6 +1080,295 @@ int lhmac_sha256(lua_State *L);
 int lsha512(lua_State *L);
 int lhmac_sha512(lua_State *L);
 
+/**
+ * AES-ECB-PKCS5Padding加密
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = 'something'
+ * local key = [[...]] --16位数字串
+ * local bs = codec.aes_encrypt(src, key)
+ * local dst = codec.base64_encode(bs) --BASE64密文
+ */
+static int codec_aes_encrypt(lua_State *L)
+{
+	size_t len;
+	const char *src = luaL_checklstring(L, 1, &len);
+	char *key = luaL_checkstring(L, 2);
+
+	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER_CTX_init(&ctx);
+
+	int ret = EVP_EncryptInit_ex(&ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
+	if(ret != 1)
+	{
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return luaL_error(L, "EVP encrypt init error");
+	}
+
+	int dstn = len + 128, n, wn;
+	char dst[dstn];
+	memset(dst, 0, dstn);
+
+	ret = EVP_EncryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	if(ret != 1)
+	{
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return luaL_error(L, "EVP encrypt update error");
+	}
+	n = wn;
+
+	ret = EVP_EncryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	if(ret != 1)
+	{
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return luaL_error(L, "EVP encrypt final error");
+	}
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	n += wn;
+
+	lua_pushlstring(L, dst, n);
+	return 1;
+}
+
+/**
+ * AES-ECB-PKCS5Padding解密
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = [[...]] --BASE64密文
+ * local key = [[...]] --16位数字串
+ * local bs = codec.base64_decode(src)
+ * local dst = codec.aes_decrypt(bs, key)
+ */
+static int codec_aes_decrypt(lua_State *L)
+{
+	size_t len;
+	const char *src = luaL_checklstring(L, 1, &len);
+	char *key = luaL_checkstring(L, 2);
+
+	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER_CTX_init(&ctx);
+
+	int ret = EVP_DecryptInit_ex(&ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
+	if(ret != 1)
+	{
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return luaL_error(L, "EVP decrypt init error");
+	}
+
+	int n, wn;
+	char dst[len];
+	memset(dst, 0, len);
+
+	ret = EVP_DecryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	if(ret != 1)
+	{
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return luaL_error(L, "EVP decrypt update error");
+	}
+	n = wn;
+
+	ret = EVP_DecryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	if(ret != 1)
+	{
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return luaL_error(L, "EVP decrypt final error");
+	}
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	n += wn;
+
+	lua_pushlstring(L, dst, n);
+	return 1;
+}
+
+/**
+ * SHA256WithRSA私钥签名
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = 'something'
+ * local pem = [[...]] --私钥PEM字符串
+ * local bs = codec.rsa_private_sign(src, pem)
+ * local dst = codec.base64_encode(bs) --BASE64签名
+ */
+static int codec_rsa_sha256_private_sign(lua_State *L)
+{
+	size_t len;
+	const char *src = luaL_checklstring(L, 1, &len);
+	unsigned char sha[SHA256_DIGEST_LENGTH];
+	memset(sha, 0, SHA256_DIGEST_LENGTH);
+	SHA256((unsigned char*)src, len, sha);
+
+	// 读取私钥
+	char *pem = luaL_checkstring(L, 2);
+	BIO *bio = BIO_new_mem_buf((void *)pem, -1);
+	if(bio == NULL)
+	{
+		BIO_free_all(bio);
+		return luaL_error(L, "PEM error");
+	}
+	RSA *rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
+	if(rsa == NULL)
+	{
+		BIO_free_all(bio);
+		return luaL_error(L, "RSA read private key error");
+	}
+	BIO_free_all(bio);
+	int n = RSA_size(rsa), wn;
+	char dst[n];
+	memset(dst, 0, n);
+
+	int ret = RSA_sign(NID_sha256, sha, SHA256_DIGEST_LENGTH, (unsigned char *)dst, (unsigned int *)&wn, rsa);
+	if(ret != 1)
+	{
+		RSA_free(rsa);
+		return luaL_error(L, "RSA sign error");
+	}
+	RSA_free(rsa);
+
+	lua_pushlstring(L, dst, wn);
+	return 1;
+}
+
+/**
+ * SHA256WithRSA公钥验签
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = 'something'
+ * local sign = [[...]] --BASE64签名
+ * local bs = codec.base64_decode(sign)
+ * local pem = [[...]] --公钥PEM字符串
+ * local ok = codec.rsa_public_verify(src, bs, pem, type) --true/false
+ */
+static int codec_rsa_sha256_public_verify(lua_State *L)
+{
+	size_t srclen, signlen;
+	const char *src = luaL_checklstring(L, 1, &srclen);
+	const char *sign = luaL_checklstring(L, 2, &signlen);
+	char *pem = luaL_checkstring(L, 3);
+
+	unsigned char sha[SHA256_DIGEST_LENGTH];
+	memset(sha, 0, SHA256_DIGEST_LENGTH);
+	SHA256((unsigned char*)src, srclen, sha);
+
+	BIO *bio = BIO_new_mem_buf((void *)pem, -1);
+	if(bio == NULL)
+	{
+	BIO_free_all(bio);
+	return luaL_error(L, "PEM error");
+	}
+	RSA *rsa = PEM_read_bio_RSAPublicKey(bio, NULL, NULL, NULL); //PKCS#1用PEM_read_bio_RSAPublicKey  PKCS#8用PEM_read_bio_RSA_PUBKEY
+	if(rsa == NULL)
+	{
+	BIO_free_all(bio);
+	return luaL_error(L, "RSA read public key error");
+	}
+	BIO_free_all(bio);
+
+	int ret = RSA_verify(NID_sha256, sha, SHA256_DIGEST_LENGTH, (unsigned char *)sign, signlen, rsa);
+	RSA_free(rsa);
+
+	lua_pushboolean(L, ret);
+	return 1;
+}
+
+/**
+ * RSA公钥加密
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = 'something'
+ * local pem = [[...]] --公钥PEM字符串
+ * local type = 1
+ * local bs = codec.rsa_public_encrypt(src, pem, type)
+ * local dst = codec.base64_encode(bs) --BASE64密文
+ */
+static int codec_rsa_public_encrypt(lua_State *L)
+{
+	size_t len;
+	const char *src = luaL_checklstring(L, 1, &len);
+	char *pem = luaL_checkstring(L, 2);
+	int type = luaL_checkinteger(L, 3);
+
+	BIO *bio = BIO_new_mem_buf((void *)pem, -1);
+	if(bio == NULL)
+	{
+	BIO_free_all(bio);
+	return luaL_error(L, "PEM error");
+	}
+	RSA *rsa = type == 1 ? PEM_read_bio_RSAPublicKey(bio, NULL, NULL, NULL) : PEM_read_bio_RSA_PUBKEY(bio, NULL, NULL, NULL);
+	if(rsa == NULL)
+	{
+	BIO_free_all(bio);
+	return luaL_error(L, "RSA read public key error");
+	}
+	BIO_free_all(bio);
+
+	int n = RSA_size(rsa);
+	char dst[n];
+	memset(dst, 0, n);
+
+	int ret = RSA_public_encrypt(len, (unsigned char *)src, (unsigned char *)dst, rsa, RSA_PKCS1_PADDING);
+	if(ret != n)
+	{
+	RSA_free(rsa);
+	BIO_free_all(bio);
+	return luaL_error(L, "RSA public encrypt error");
+	}
+	RSA_free(rsa);
+
+	lua_pushlstring(L, dst, n);
+	return 1;
+}
+
+/**
+ * RSA私钥解密
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = [[...]] --BASE64密文
+ * local bs = codec.base64_decode(src)
+ * local pem = [[...]] --私钥PEM字符串
+ * local dst = codec.rsa_private_decrypt(bs, pem)
+ */
+static int codec_rsa_private_decrypt(lua_State *L)
+{
+	const char *src = luaL_checkstring(L, 1);
+	char *pem = luaL_checkstring(L, 2);
+
+	BIO *bio = BIO_new_mem_buf((void *)pem, -1);
+	if(bio == NULL)
+	{
+	BIO_free_all(bio);
+	return luaL_error(L, "PEM error");
+	}
+	RSA *rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
+	if(rsa == NULL)
+	{
+	BIO_free_all(bio);
+	return luaL_error(L, "RSA read private key error");
+	}
+	BIO_free_all(bio);
+
+	int n = RSA_size(rsa);
+	char dst[n];
+	memset(dst, 0, n);
+
+	int ret = RSA_private_decrypt(n, (unsigned char *)src, (unsigned char *)dst, rsa, RSA_PKCS1_PADDING);
+	if(ret <= 0)
+	{
+	RSA_free(rsa);
+	BIO_free_all(bio);
+	return luaL_error(L, "RSA private decrypt error");
+	}
+	RSA_free(rsa);
+
+	lua_pushlstring(L, dst, ret);
+	return 1;
+}
+
 LUAMOD_API int
 luaopen_skynet_crypt(lua_State *L) {
 	luaL_checkversion(L);
@@ -1107,6 +1404,12 @@ luaopen_skynet_crypt(lua_State *L) {
 		{ "hmac_sha512", lhmac_sha512 },
 		{ "hmac_hash", lhmac_hash },
 		{ "xor_str", lxor_str },
+		{ "aes_encrypt", codec_aes_encrypt },
+		{ "aes_decrypt", codec_aes_decrypt },
+		{ "rsa_sha256_private_sign", codec_rsa_sha256_private_sign },
+		{ "rsa_sha256_public_verify", codec_rsa_sha256_public_verify },
+		{ "rsa_public_encrypt", codec_rsa_public_encrypt },
+		{ "rsa_private_decrypt", codec_rsa_private_decrypt },
 		{ "padding", NULL },
 		{ NULL, NULL },
 	};
