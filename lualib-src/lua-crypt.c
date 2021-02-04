@@ -1102,8 +1102,8 @@ static int codec_aes_encrypt(lua_State *L)
 	int ret = EVP_EncryptInit_ex(&ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
 	if(ret != 1)
 	{
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return luaL_error(L, "EVP encrypt init error");
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP encrypt init error");
 	}
 
 	int dstn = len + 128, n, wn;
@@ -1113,16 +1113,16 @@ static int codec_aes_encrypt(lua_State *L)
 	ret = EVP_EncryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
 	if(ret != 1)
 	{
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return luaL_error(L, "EVP encrypt update error");
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP encrypt update error");
 	}
 	n = wn;
 
 	ret = EVP_EncryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
 	if(ret != 1)
 	{
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return luaL_error(L, "EVP encrypt final error");
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP encrypt final error");
 	}
 	EVP_CIPHER_CTX_cleanup(&ctx);
 	n += wn;
@@ -1153,8 +1153,8 @@ static int codec_aes_decrypt(lua_State *L)
 	int ret = EVP_DecryptInit_ex(&ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
 	if(ret != 1)
 	{
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return luaL_error(L, "EVP decrypt init error");
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP decrypt init error");
 	}
 
 	int n, wn;
@@ -1164,20 +1164,157 @@ static int codec_aes_decrypt(lua_State *L)
 	ret = EVP_DecryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
 	if(ret != 1)
 	{
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return luaL_error(L, "EVP decrypt update error");
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP decrypt update error");
 	}
 	n = wn;
 
 	ret = EVP_DecryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
 	if(ret != 1)
 	{
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return luaL_error(L, "EVP decrypt final error");
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP decrypt final error");
 	}
 	EVP_CIPHER_CTX_cleanup(&ctx);
 	n += wn;
 
+	lua_pushlstring(L, dst, n);
+	return 1;
+}
+
+/**
+ * AES-GCM加密
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = 'something'
+ * local key = [[...]] --16位数字串
+ * local bs = codec.aes_gcm_encrypt(src, key)
+ * local dst = codec.base64_encode(bs) --BASE64密文
+ */
+static int aes_gcm_encrypt(lua_State *L)
+{
+	size_t len, iv_len, aad_len, tag_len;
+
+	int params_num = lua_gettop(L);
+	const char *src = luaL_checklstring(L, 1, &len);
+	char *key = luaL_checkstring(L, 2);
+	char *iv = luaL_checklstring(L, 3, &iv_len);
+	char *tag = luaL_checklstring(L, 4, &tag_len);
+	char *aad = NULL;
+	if(params_num == 5){
+		aad = luaL_checklstring(L, 5, &aad_len);
+	}
+
+	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER_CTX_init(&ctx);
+
+	int ret = EVP_EncryptInit_ex(&ctx, EVP_aes_256_gcm(), NULL, NULL, NULL);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP encrypt init error");
+	}
+
+	EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL);
+
+	EVP_EncryptInit_ex(&ctx, NULL, NULL, key, iv);
+
+	int dstn = len + 128, n, wn;
+	char dst[dstn];
+	memset(dst, 0, dstn);
+
+	ret = EVP_EncryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP encrypt update error");
+	}
+	n = wn;
+
+	ret = EVP_EncryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP encrypt final error");
+	}
+
+	EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_CCM_SET_TAG, tag_len, tag);
+
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	n += wn;
+
+	lua_pushlstring(L, dst, n);
+	return 1;
+}
+
+/**
+ * AES-GCM解密
+ *
+ * LUA示例:
+ * local codec = require('codec')
+ * local src = [[...]] --BASE64密文
+ * local key = [[...]] --16位数字串
+ * local bs = codec.base64_decode(src)
+ * local dst = codec.aes_gcm_decrypt(bs, key)
+ */
+static int aes_gcm_decrypt(lua_State *L)
+{
+	size_t len, iv_len, aad_len, tag_len;
+
+	int params_num = lua_gettop(L);
+	const char *src = luaL_checklstring(L, 1, &len);
+	char *key = luaL_checkstring(L, 2);
+	char *iv = luaL_checklstring(L, 3, &iv_len);
+	char *tag = luaL_checklstring(L, 4, &tag_len);
+	char *aad = NULL;
+	if(params_num == 5){
+		aad = luaL_checklstring(L, 5, &aad_len);
+	}
+
+	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER_CTX_init(&ctx);
+
+	int ret = EVP_DecryptInit_ex(&ctx, EVP_aes_256_gcm(), NULL, NULL, NULL);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP decrypt init mode error!");
+	}
+	EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL);
+	ret = EVP_DecryptInit_ex(&ctx, NULL, NULL, (unsigned char *)key, (unsigned char *)iv);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP decrypt init key, iv error!");
+	}
+	int n, wn;
+	char dst[len];
+	memset(dst, 0, len);
+	if(aad){
+		EVP_DecryptUpdate(&ctx, NULL, &wn, aad, aad_len);
+	}
+	ret = EVP_DecryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP decrypt update error");
+	}
+	n = wn;
+	ret = EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_CCM_SET_TAG, tag_len, tag);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+        return luaL_error(L, "EVP cipher ctx ctrl error");
+	}
+	ret = EVP_DecryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	if(ret != 1)
+	{
+		EVP_CIPHER_CTX_cleanup(&ctx);
+		return luaL_error(L, "EVP decrypt final error");
+	}
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	n += wn;
 	lua_pushlstring(L, dst, n);
 	return 1;
 }
@@ -1256,14 +1393,14 @@ static int codec_rsa_sha256_public_verify(lua_State *L)
 	BIO *bio = BIO_new_mem_buf((void *)pem, -1);
 	if(bio == NULL)
 	{
-	BIO_free_all(bio);
-	return luaL_error(L, "PEM error");
+		BIO_free_all(bio);
+		return luaL_error(L, "PEM error");
 	}
 	RSA *rsa = PEM_read_bio_RSAPublicKey(bio, NULL, NULL, NULL); //PKCS#1用PEM_read_bio_RSAPublicKey  PKCS#8用PEM_read_bio_RSA_PUBKEY
 	if(rsa == NULL)
 	{
-	BIO_free_all(bio);
-	return luaL_error(L, "RSA read public key error");
+		BIO_free_all(bio);
+		return luaL_error(L, "RSA read public key error");
 	}
 	BIO_free_all(bio);
 
@@ -1295,14 +1432,14 @@ static int codec_rsa_public_encrypt(lua_State *L)
 	BIO *bio = BIO_new_mem_buf((void *)pem, -1);
 	if(bio == NULL)
 	{
-	BIO_free_all(bio);
-	return luaL_error(L, "PEM error");
+		BIO_free_all(bio);
+		return luaL_error(L, "PEM error");
 	}
 	RSA *rsa = type == 1 ? PEM_read_bio_RSAPublicKey(bio, NULL, NULL, NULL) : PEM_read_bio_RSA_PUBKEY(bio, NULL, NULL, NULL);
 	if(rsa == NULL)
 	{
-	BIO_free_all(bio);
-	return luaL_error(L, "RSA read public key error");
+		BIO_free_all(bio);
+		return luaL_error(L, "RSA read public key error");
 	}
 	BIO_free_all(bio);
 
@@ -1313,9 +1450,9 @@ static int codec_rsa_public_encrypt(lua_State *L)
 	int ret = RSA_public_encrypt(len, (unsigned char *)src, (unsigned char *)dst, rsa, RSA_PKCS1_PADDING);
 	if(ret != n)
 	{
-	RSA_free(rsa);
-	BIO_free_all(bio);
-	return luaL_error(L, "RSA public encrypt error");
+		RSA_free(rsa);
+		BIO_free_all(bio);
+		return luaL_error(L, "RSA public encrypt error");
 	}
 	RSA_free(rsa);
 
@@ -1341,14 +1478,14 @@ static int codec_rsa_private_decrypt(lua_State *L)
 	BIO *bio = BIO_new_mem_buf((void *)pem, -1);
 	if(bio == NULL)
 	{
-	BIO_free_all(bio);
-	return luaL_error(L, "PEM error");
+		BIO_free_all(bio);
+		return luaL_error(L, "PEM error");
 	}
 	RSA *rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
 	if(rsa == NULL)
 	{
-	BIO_free_all(bio);
-	return luaL_error(L, "RSA read private key error");
+		BIO_free_all(bio);
+		return luaL_error(L, "RSA read private key error");
 	}
 	BIO_free_all(bio);
 
@@ -1359,9 +1496,9 @@ static int codec_rsa_private_decrypt(lua_State *L)
 	int ret = RSA_private_decrypt(n, (unsigned char *)src, (unsigned char *)dst, rsa, RSA_PKCS1_PADDING);
 	if(ret <= 0)
 	{
-	RSA_free(rsa);
-	BIO_free_all(bio);
-	return luaL_error(L, "RSA private decrypt error");
+		RSA_free(rsa);
+		BIO_free_all(bio);
+		return luaL_error(L, "RSA private decrypt error");
 	}
 	RSA_free(rsa);
 
@@ -1406,6 +1543,8 @@ luaopen_skynet_crypt(lua_State *L) {
 		{ "xor_str", lxor_str },
 		{ "aes_encrypt", codec_aes_encrypt },
 		{ "aes_decrypt", codec_aes_decrypt },
+		{ "aes_gcm_encrypt", aes_gcm_encrypt },
+		{ "aes_gcm_decrypt", aes_gcm_decrypt },
 		{ "rsa_sha256_private_sign", codec_rsa_sha256_private_sign },
 		{ "rsa_sha256_public_verify", codec_rsa_sha256_public_verify },
 		{ "rsa_public_encrypt", codec_rsa_public_encrypt },
