@@ -1396,7 +1396,7 @@ static int codec_rsa_sha256_public_verify(lua_State *L)
 		BIO_free_all(bio);
 		return luaL_error(L, "PEM error");
 	}
-	RSA *rsa = PEM_read_bio_RSAPublicKey(bio, NULL, NULL, NULL); //PKCS#1用PEM_read_bio_RSAPublicKey  PKCS#8用PEM_read_bio_RSA_PUBKEY
+	RSA *rsa = PEM_read_bio_RSA_PUBKEY(bio, NULL, NULL, NULL); //PKCS#1用PEM_read_bio_RSAPublicKey  PKCS#8用PEM_read_bio_RSA_PUBKEY
 	if(rsa == NULL)
 	{
 		BIO_free_all(bio);
