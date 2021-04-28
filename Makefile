@@ -142,7 +142,8 @@ $(LUA_CLIB_PATH)/Ip2region.so : 3rd/ip2region/ip2region.c 3rd/ip2region/lua_ip2r
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/ip2region/ip2region $^ -o $@
 
 clean :
-	rm -f $(SKYNET_BUILD_PATH)/skynet $(CSERVICE_PATH)/*.so $(LUA_CLIB_PATH)/*.so
+	rm -f $(SKYNET_BUILD_PATH)/skynet $(CSERVICE_PATH)/*.so $(LUA_CLIB_PATH)/*.so && \
+  rm -rf $(SKYNET_BUILD_PATH)/*.dSYM $(CSERVICE_PATH)/*.dSYM $(LUA_CLIB_PATH)/*.dSYM
 
 cleanall: clean
 ifneq (,$(wildcard 3rd/jemalloc/Makefile))

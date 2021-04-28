@@ -678,13 +678,34 @@ _failed_getaddrinfo:
 }
 
 static int
+report_error(struct socket *s, struct socket_message *result, const char *err) {
+	result->id = s->id;
+	result->ud = 0;
+	result->opaque = s->opaque;
+	result->data = (char *)err;
+	return SOCKET_ERR;
+}
+
+static int
 close_write(struct socket_server *ss, struct socket *s, struct socket_lock *l, struct socket_message *result) {
-	if (ATOM_LOAD(&s->type) == SOCKET_TYPE_HALFCLOSE_READ) {
+	if (s->closing) {
 		force_close(ss,s,l,result);
-		return SOCKET_CLOSE;
+		return SOCKET_RST;
 	} else {
+		int t = ATOM_LOAD(&s->type);
+		if (t == SOCKET_TYPE_HALFCLOSE_READ) {
+			// recv 0 before, ignore the error and close fd
+			force_close(ss,s,l,result);
+			return SOCKET_RST;
+		}
+		if (t == SOCKET_TYPE_HALFCLOSE_WRITE) {
+			// already raise SOCKET_ERR
+			return SOCKET_RST;
+		}
 		ATOM_STORE(&s->type, SOCKET_TYPE_HALFCLOSE_WRITE);
-		return -1;
+		shutdown(s->fd, SHUT_WR);
+		enable_write(ss, s, false);
+		return report_error(s, result, strerror(errno));
 	}
 }
 
@@ -837,19 +858,25 @@ static int
 send_buffer_(struct socket_server *ss, struct socket *s, struct socket_lock *l, struct socket_message *result) {
 	assert(!list_uncomplete(&s->low));
 	// step 1
-	if (send_list(ss,s,&s->high,l,result) == SOCKET_CLOSE) {
-		return SOCKET_CLOSE;
-	}
-	if (ATOM_LOAD(&s->type) == SOCKET_TYPE_HALFCLOSE_WRITE) {
+	int ret = send_list(ss,s,&s->high,l,result);
+	if (ret != -1) {
+		if (ret == SOCKET_ERR) {
+			// HALFCLOSE_WRITE
+			return SOCKET_ERR;
+		}
+		// SOCKET_RST (ignore)
 		return -1;
 	}
 	if (s->high.head == NULL) {
 		// step 2
 		if (s->low.head != NULL) {
-			if (send_list(ss,s,&s->low,l,result) == SOCKET_CLOSE) {
-				return SOCKET_CLOSE;
-			}
-			if (ATOM_LOAD(&s->type) == SOCKET_TYPE_HALFCLOSE_WRITE) {
+			int ret = send_list(ss,s,&s->low,l,result);
+			if (ret != -1) {
+				if (ret == SOCKET_ERR) {
+					// HALFCLOSE_WRITE
+					return SOCKET_ERR;
+				}
+				// SOCKET_RST (ignore)
 				return -1;
 			}
 			// step 3
@@ -864,18 +891,15 @@ send_buffer_(struct socket_server *ss, struct socket *s, struct socket_lock *l, 
 		assert(send_buffer_empty(s) && s->wb_size == 0);
 
 		if (s->closing) {
+			// finish writing
 			force_close(ss, s, l, result);
-			return SOCKET_CLOSE;
+			return -1;
 		}
 
 		int err = enable_write(ss, s, false);
 
 		if (err) {
-			result->opaque = s->opaque;
-			result->id = s->id;
-			result->ud = 0;
-			result->data = "disable write failed";
-			return SOCKET_ERR;
+			return report_error(s, result, "disable write failed");
 		}
 
 		if(s->warn_size > 0){
@@ -966,11 +990,7 @@ trigger_write(struct socket_server *ss, struct request_send * request, struct so
 	if (socket_invalid(s, id))
 		return -1;
 	if (enable_write(ss, s, true)) {
-		result->opaque = s->opaque;
-		result->id = s->id;
-		result->ud = 0;
-		result->data = "enable write failed";
-		return SOCKET_ERR;
+		return report_error(s, result, "enable write failed");
 	}
 	return -1;
 }
@@ -1001,7 +1021,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 		so.free_func((void *)request->buffer);
 		return -1;
 	}
-	if (send_buffer_empty(s) && type == SOCKET_TYPE_CONNECTED) {
+	if (send_buffer_empty(s)) {
 		if (s->protocol == PROTOCOL_TCP) {
 			append_sendbuffer(ss, s, request);	// add to high priority list, even priority == PRIORITY_LOW
 		} else {
@@ -1027,11 +1047,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 			}
 		}
 		if (enable_write(ss, s, true)) {
-			result->opaque = s->opaque;
-			result->id = s->id;
-			result->ud = 0;
-			result->data = "enable write failed";
-			return SOCKET_ERR;
+			return report_error(s, result, "enable write failed");
 		}
 	} else {
 		if (s->protocol == PROTOCOL_TCP) {
@@ -1085,30 +1101,54 @@ nomore_sending_data(struct socket *s) {
 		|| (ATOM_LOAD(&s->type) == SOCKET_TYPE_HALFCLOSE_WRITE);
 }
 
+static void
+close_read(struct socket_server *ss, struct socket * s, struct socket_message *result) {
+	// Don't read socket later
+	ATOM_STORE(&s->type , SOCKET_TYPE_HALFCLOSE_READ);
+	enable_read(ss,s,false);
+	shutdown(s->fd, SHUT_RD);
+	result->id = s->id;
+	result->ud = 0;
+	result->data = NULL;
+	result->opaque = s->opaque;
+}
+
+static inline int
+halfclose_read(struct socket *s) {
+	return ATOM_LOAD(&s->type) == SOCKET_TYPE_HALFCLOSE_READ;
+}
+
+// SOCKET_CLOSE can be raised (only once) in one of two conditions.
+// See https://github.com/cloudwu/skynet/issues/1346 for more discussion.
+// 1. close socket by self, See close_socket()
+// 2. recv 0 or eof event (close socket by remote), See forward_message_tcp()
+// It's able to write data after SOCKET_CLOSE (In condition 2), but if remote is closed, SOCKET_ERR may raised.
 static int
 close_socket(struct socket_server *ss, struct request_close *request, struct socket_message *result) {
 	int id = request->id;
 	struct socket * s = &ss->slot[HASH_ID(id)];
 	if (socket_invalid(s, id)) {
-		result->id = id;
-		result->opaque = request->opaque;
-		result->ud = 0;
-		result->data = NULL;
-		return SOCKET_CLOSE;
+		// The socket is closed, ignore
+		return -1;
 	}
 	struct socket_lock l;
 	socket_lock_init(s, &l);
 
+	int shutdown_read = halfclose_read(s);
+
 	if (request->shutdown || nomore_sending_data(s)) {
+		// If socket is SOCKET_TYPE_HALFCLOSE_READ, Do not raise SOCKET_CLOSE again.
+		int r = shutdown_read ? -1 : SOCKET_CLOSE;
 		force_close(ss,s,&l,result);
+		return r;
+	}
+	s->closing = true;
+	if (!shutdown_read) {
+		// don't read socket after socket.close()
+		close_read(ss, s, result);
 		return SOCKET_CLOSE;
 	}
-
-	ATOM_STORE(&s->type , SOCKET_TYPE_HALFCLOSE_READ);
-	s->closing = true;
-	enable_read(ss,s,true);
-	shutdown(s->fd, SHUT_RD);
-
+	// recv 0 before (socket is SOCKET_TYPE_HALFCLOSE_READ) and waiting for sending data out.
 	return -1;
 }
 
@@ -1141,6 +1181,11 @@ resume_socket(struct socket_server *ss, struct request_resumepause *request, str
 		result->data = "invalid socket";
 		return SOCKET_ERR;
 	}
+	if (halfclose_read(s)) {
+		// The closing socket may be in transit, so raise an error. See https://github.com/cloudwu/skynet/issues/1374
+		result->data = "socket closed";
+		return SOCKET_ERR;
+	}
 	struct socket_lock l;
 	socket_lock_init(s, &l);
 	if (enable_read(ss, s, true)) {
@@ -1159,7 +1204,7 @@ resume_socket(struct socket_server *ss, struct request_resumepause *request, str
 		result->data = "transfer";
 		return SOCKET_OPEN;
 	}
-	// if s->type == SOCKET_TYPE_HALFCLOSE_* , SOCKET_CLOSE message will send later
+	// if s->type == SOCKET_TYPE_HALFCLOSE_WRITE , SOCKET_CLOSE message will send later
 	return -1;
 }
 
@@ -1171,11 +1216,7 @@ pause_socket(struct socket_server *ss, struct request_resumepause *request, stru
 		return -1;
 	}
 	if (enable_read(ss, s, false)) {
-		result->id = id;
-		result->opaque = request->opaque;
-		result->ud = 0;
-		result->data = "enable read failed";
-		return SOCKET_ERR;
+		return report_error(s, result, "enable read failed");
 	}
 	return -1;
 }
@@ -1250,12 +1291,7 @@ set_udp_address(struct socket_server *ss, struct request_setudp *request, struct
 	int type = request->address[0];
 	if (type != s->protocol) {
 		// protocol mismatch
-		result->opaque = s->opaque;
-		result->id = s->id;
-		result->ud = 0;
-		result->data = "protocol mismatch";
-
-		return SOCKET_ERR;
+		return report_error(s, result, "protocol mismatch");
 	}
 	if (type == PROTOCOL_UDP) {
 		memcpy(s->p.udp_address, request->address, 1+2+4);	// 1 type, 2 port, 4 ipv4
@@ -1369,47 +1405,56 @@ forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_lo
 		FREE(buffer);
 		switch(errno) {
 		case EINTR:
-			break;
 		case AGAIN_WOULDBLOCK:
-			skynet_error(NULL, "socket-server: EAGAIN capture.");
 			break;
 		default:
-			// close when error
-			force_close(ss, s, l, result);
-			result->data = strerror(errno);
-			return SOCKET_ERR;
+			return report_error(s, result, strerror(errno));
 		}
 		return -1;
 	}
 	if (n==0) {
 		FREE(buffer);
-		if (nomore_sending_data(s)) {
-			force_close(ss,s,l,result); 
-		} else { 
-			ATOM_STORE(&s->type , SOCKET_TYPE_HALFCLOSE_READ);
-			shutdown(s->fd, SHUT_RD);
+		if (s->closing) {
+			// Rare case : if s->closing is true, reading event is disable, and SOCKET_CLOSE is raised.
+			if (nomore_sending_data(s)) {
+				force_close(ss,s,l,result);
+			}
+			return -1;
+		}
+		int t = ATOM_LOAD(&s->type);
+		if (t == SOCKET_TYPE_HALFCLOSE_READ) {
+			// Rare case : Already shutdown read.
+			return -1;
+		}
+		if (t == SOCKET_TYPE_HALFCLOSE_WRITE) {
+			// Remote shutdown read (write error) before.
+			force_close(ss,s,l,result);
+		} else {
+			close_read(ss, s, result);
 		}
 		return SOCKET_CLOSE;
 	}
 
-	if (ATOM_LOAD(&s->type) == SOCKET_TYPE_HALFCLOSE_READ) {
-		// discard recv data
+	if (halfclose_read(s)) {
+		// discard recv data (Rare case : if socket is HALFCLOSE_READ, reading event is disable.)
 		FREE(buffer);
 		return -1;
 	}
 
 	stat_read(ss,s,n);
 
-	if (n == sz) {
-		s->p.size *= 2;
-	} else if (sz > MIN_READ_BUFFER && n*2 < sz) {
-		s->p.size /= 2;
-	}
-
 	result->opaque = s->opaque;
 	result->id = s->id;
 	result->ud = n;
 	result->data = buffer;
+
+	if (n == sz) {
+		s->p.size *= 2;
+		return SOCKET_MORE;
+	} else if (sz > MIN_READ_BUFFER && n*2 < sz) {
+		s->p.size /= 2;
+	}
+
 	return SOCKET_DATA;
 }
 
@@ -1579,7 +1624,7 @@ clear_closed_event(struct socket_server *ss, struct socket_message * result, int
 			struct event *e = &ss->ev[i];
 			struct socket *s = e->s;
 			if (s) {
-				if (socket_invalid(s, id)) {
+				if (socket_invalid(s, id) && s->id == id) {
 					e->s = NULL;
 					break;
 				}
@@ -1613,10 +1658,11 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 			ss->event_index = 0;
 			if (ss->event_n <= 0) {
 				ss->event_n = 0;
-				if (errno == EINTR) {
-					continue;
+				int err = errno;
+				if (err != EINTR) {
+					skynet_error(NULL, "socket-server: %s", strerror(err));
 				}
-				return -1;
+				continue;
 			}
 		}
 		struct event *e = &ss->ev[ss->event_index++];
@@ -1648,6 +1694,10 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 				int type;
 				if (s->protocol == PROTOCOL_TCP) {
 					type = forward_message_tcp(ss, s, &l, result);
+					if (type == SOCKET_MORE) {
+						--ss->event_index;
+						return SOCKET_DATA;
+					}
 				} else {
 					type = forward_message_udp(ss, s, &l, result);
 					if (type == SOCKET_UDP) {
@@ -1672,7 +1722,6 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 				return type;
 			}
 			if (e->error) {
-				// close when error
 				int error;
 				socklen_t len = sizeof(error);  
 				int code = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &error, &len);  
@@ -1684,13 +1733,16 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 				} else {
 					err = "Unknown error";
 				}
-				force_close(ss, s, &l, result);
-				result->data = (char *)err;
-				return SOCKET_ERR;
+				return report_error(s, result, err);
 			}
-			if(e->eof) {
+			if (e->eof) {
+				// For epoll (at least), FIN packets are exchanged both ways.
+				// See: https://stackoverflow.com/questions/52976152/tcp-when-is-epollhup-generated
+				int halfclose = halfclose_read(s);
 				force_close(ss, s, &l, result);
-				return SOCKET_CLOSE;
+				if (!halfclose) {
+					return SOCKET_CLOSE;
+				}
 			}
 			break;
 		}
