@@ -1096,13 +1096,13 @@ static int codec_aes_encrypt(lua_State *L)
 	const char *src = luaL_checklstring(L, 1, &len);
 	char *key = luaL_checkstring(L, 2);
 
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+	EVP_CIPHER_CTX_init(ctx);
 
-	int ret = EVP_EncryptInit_ex(&ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
+	int ret = EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP encrypt init error");
 	}
 
@@ -1110,21 +1110,21 @@ static int codec_aes_encrypt(lua_State *L)
 	char dst[dstn];
 	memset(dst, 0, dstn);
 
-	ret = EVP_EncryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	ret = EVP_EncryptUpdate(ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP encrypt update error");
 	}
 	n = wn;
 
-	ret = EVP_EncryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	ret = EVP_EncryptFinal_ex(ctx, (unsigned char *)(dst + n), &wn);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP encrypt final error");
 	}
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_free(ctx);
 	n += wn;
 
 	lua_pushlstring(L, dst, n);
@@ -1147,13 +1147,13 @@ static int codec_aes_decrypt(lua_State *L)
 	const char *src = luaL_checklstring(L, 1, &len);
 	char *key = luaL_checkstring(L, 2);
 
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_init(ctx);
 
-	int ret = EVP_DecryptInit_ex(&ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
+	int ret = EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, (unsigned char *)key, NULL);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP decrypt init error");
 	}
 
@@ -1161,21 +1161,21 @@ static int codec_aes_decrypt(lua_State *L)
 	char dst[len];
 	memset(dst, 0, len);
 
-	ret = EVP_DecryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	ret = EVP_DecryptUpdate(ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP decrypt update error");
 	}
 	n = wn;
 
-	ret = EVP_DecryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	ret = EVP_DecryptFinal_ex(ctx, (unsigned char *)(dst + n), &wn);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP decrypt final error");
 	}
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_free(ctx);
 	n += wn;
 
 	lua_pushlstring(L, dst, n);
@@ -1206,42 +1206,42 @@ static int aes_gcm_encrypt(lua_State *L)
 		aad = luaL_checklstring(L, 5, &aad_len);
 	}
 
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_init(ctx);
 
-	int ret = EVP_EncryptInit_ex(&ctx, EVP_aes_256_gcm(), NULL, NULL, NULL);
+	int ret = EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP encrypt init error");
 	}
 
-	EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL);
 
-	EVP_EncryptInit_ex(&ctx, NULL, NULL, key, iv);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, key, iv);
 
 	int dstn = len + 128, n, wn;
 	char dst[dstn];
 	memset(dst, 0, dstn);
 
-	ret = EVP_EncryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	ret = EVP_EncryptUpdate(ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP encrypt update error");
 	}
 	n = wn;
 
-	ret = EVP_EncryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	ret = EVP_EncryptFinal_ex(ctx, (unsigned char *)(dst + n), &wn);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP encrypt final error");
 	}
 
-	EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_CCM_SET_TAG, tag_len, tag);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, tag_len, tag);
 
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_free(ctx);
 	n += wn;
 
 	lua_pushlstring(L, dst, n);
@@ -1272,48 +1272,48 @@ static int aes_gcm_decrypt(lua_State *L)
 		aad = luaL_checklstring(L, 5, &aad_len);
 	}
 
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_init(ctx);
 
-	int ret = EVP_DecryptInit_ex(&ctx, EVP_aes_256_gcm(), NULL, NULL, NULL);
+	int ret = EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP decrypt init mode error!");
 	}
-	EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL);
-	ret = EVP_DecryptInit_ex(&ctx, NULL, NULL, (unsigned char *)key, (unsigned char *)iv);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL);
+	ret = EVP_DecryptInit_ex(ctx, NULL, NULL, (unsigned char *)key, (unsigned char *)iv);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP decrypt init key, iv error!");
 	}
 	int n, wn;
 	char dst[len];
 	memset(dst, 0, len);
 	if(aad){
-		EVP_DecryptUpdate(&ctx, NULL, &wn, aad, aad_len);
+		EVP_DecryptUpdate(ctx, NULL, &wn, aad, aad_len);
 	}
-	ret = EVP_DecryptUpdate(&ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
+	ret = EVP_DecryptUpdate(ctx, (unsigned char *)dst, &wn, (unsigned char *)src, len);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP decrypt update error");
 	}
 	n = wn;
-	ret = EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_CCM_SET_TAG, tag_len, tag);
+	ret = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, tag_len, tag);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
         return luaL_error(L, "EVP cipher ctx ctrl error");
 	}
-	ret = EVP_DecryptFinal_ex(&ctx, (unsigned char *)(dst + n), &wn);
+	ret = EVP_DecryptFinal_ex(ctx, (unsigned char *)(dst + n), &wn);
 	if(ret != 1)
 	{
-		EVP_CIPHER_CTX_cleanup(&ctx);
+		EVP_CIPHER_CTX_free(ctx);
 		return luaL_error(L, "EVP decrypt final error");
 	}
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_free(ctx);
 	n += wn;
 	lua_pushlstring(L, dst, n);
 	return 1;
