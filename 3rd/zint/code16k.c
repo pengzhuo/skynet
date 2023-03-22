@@ -41,7 +41,7 @@
 #define CANDB 98
 #define CANDBB 99
 
-int list[2][170];
+int list_[2][170];
 
 /* EN 12323 Table 1 - "Code 16K" character encodations */
 const char *C16KTable[107] = {"212222", "222122", "222221", "121223", "121322", "131222", "122213",
@@ -71,14 +71,14 @@ void grwp16(int *indexliste)
 	/* bring together same type blocks */
 	if(*(indexliste) > 1) {
 		for (i = 1; i < *indexliste; i++) {
-			if(list[1][i - 1] == list[1][i]) {
+			if(list_[1][i - 1] == list_[1][i]) {
 				/* bring together */
-				list[0][i - 1] = list[0][i - 1] + list[0][i];
+				list_[0][i - 1] = list_[0][i - 1] + list_[0][i];
 
 				/* decreace the list */
 				for (j = i + 1 ;j < *indexliste; j++) {
-					list[0][j - 1] = list[0][j];
-					list[1][j - 1] = list[1][j];
+					list_[0][j - 1] = list_[0][j];
+					list_[1][j - 1] = list_[1][j];
 				}
 				(*indexliste)--;
 				i--;
@@ -92,69 +92,69 @@ void dxsmooth16(int *indexliste)
 	int current, last, next, length;
     int i;
 	for(i = 0; i < *indexliste; i++) {
-		current = list[1][i];
-		length = list[0][i];
+		current = list_[1][i];
+		length = list_[0][i];
 
 		if (i != 0)
-			last = list[1][i - 1];
+			last = list_[1][i - 1];
 		else
 			last = FALSE;
 
 		if (i != *indexliste - 1)
-			next = list[1][i + 1];
+			next = list_[1][i + 1];
 		else
 			next = FALSE;
 
 		if(i == 0) { /* first block */
 			if ((*(indexliste) == 1) && ((length == 2) && (current == ABORC)))
 				/* Rule 1a */
-				list[1][i] = LATCHC;
+				list_[1][i] = LATCHC;
 			if (current == ABORC) {
 				if(length >= 4)
 					/* Rule 1b */
-					list[1][i] = LATCHC;
+					list_[1][i] = LATCHC;
 				else
-					list[1][i] = current = AORB;
+					list_[1][i] = current = AORB;
 			}
 			if (current == SHIFTA)
 				/* Rule 1c */
-				list[1][i] = LATCHA;
+				list_[1][i] = LATCHA;
 			if ((current == AORB) && (next == SHIFTA))
 				/* Rule 1c */
-				list[1][i] = current = LATCHA;
+				list_[1][i] = current = LATCHA;
 			if (current == AORB)
 				/* Rule 1d */
-				list[1][i] = LATCHB;
+				list_[1][i] = LATCHB;
 		} else {
 			if ((current == ABORC) && (length >= 4))
 				/* Rule 3 */
-				list[1][i] = current = LATCHC;
+				list_[1][i] = current = LATCHC;
 			if (current == ABORC)
-				list[1][i] = current = AORB;
+				list_[1][i] = current = AORB;
 			if ((current == AORB) && (last == LATCHA))
-				list[1][i] = current = LATCHA;
+				list_[1][i] = current = LATCHA;
 			if ((current == AORB) && (last == LATCHB))
-				list[1][i] = current = LATCHB;
+				list_[1][i] = current = LATCHB;
 			if ((current == AORB) && (next == SHIFTA))
-				list[1][i] = current = LATCHA;
+				list_[1][i] = current = LATCHA;
 			if((current == AORB) && (next == SHIFTB))
-				list[1][i] = current = LATCHB;
+				list_[1][i] = current = LATCHB;
 			if (current == AORB)
-				list[1][i] = current = LATCHB;
+				list_[1][i] = current = LATCHB;
 			if ((current == SHIFTA) && (length > 1))
 				/* Rule 4 */
-				list[1][i] = current = LATCHA;
+				list_[1][i] = current = LATCHA;
 			if ((current == SHIFTB) && (length > 1))
 				/* Rule 5 */
-				list[1][i] = current = LATCHB;
+				list_[1][i] = current = LATCHB;
 			if ((current == SHIFTA) && (last == LATCHA))
-				list[1][i] = current = LATCHA;
+				list_[1][i] = current = LATCHA;
 			if ((current == SHIFTB) && (last == LATCHB))
-				list[1][i] = current = LATCHB;
+				list_[1][i] = current = LATCHB;
 			if ((current == SHIFTA) && (last == LATCHC))
-				list[1][i] = current = LATCHA;
+				list_[1][i] = current = LATCHA;
 			if ((current == SHIFTB) && (last == LATCHC))
-				list[1][i] = current = LATCHB;
+				list_[1][i] = current = LATCHB;
 		} /* Rule 2 is implimented elsewhere, Rule 6 is implied */
 	}
 	grwp16(indexliste);
@@ -257,13 +257,13 @@ int code16k(struct zint_symbol *symbol, uint8_t source[], int length)
 	if((gs1) && (source[indexchaine] == '[')) { mode = ABORC; } /* FNC1 */
 
 	for(i = 0; i < 160; i++) {
-		list[0][i] = 0;
+		list_[0][i] = 0;
 	}
 
 	do {
-		list[1][indexliste] = mode;
-		while ((list[1][indexliste] == mode) && (indexchaine < input_length)) {
-			list[0][indexliste]++;
+		list_[1][indexliste] = mode;
+		while ((list_[1][indexliste] == mode) && (indexchaine < input_length)) {
+			list_[0][indexliste]++;
 			indexchaine++;
 			mode = parunmodd(source[indexchaine]);
 			if((gs1) && (source[indexchaine] == '[')) { mode = ABORC; } /* FNC1 */
@@ -276,8 +276,8 @@ int code16k(struct zint_symbol *symbol, uint8_t source[], int length)
 	/* Put set data into set[] */
 	read = 0;
 	for(i = 0; i < indexliste; i++) {
-		for(j = 0; j < list[0][i]; j++) {
-			switch(list[1][i]) {
+		for(j = 0; j < list_[0][i]; j++) {
+			switch(list_[1][i]) {
 				case SHIFTA: set[read] = 'a'; break;
 				case LATCHA: set[read] = 'A'; break;
 				case SHIFTB: set[read] = 'b'; break;
