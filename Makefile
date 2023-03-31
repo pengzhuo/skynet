@@ -142,7 +142,7 @@ $(LUA_CLIB_PATH)/Ip2region.so : 3rd/ip2region/ip2region.c 3rd/ip2region/lua_ip2r
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/ip2region/ip2region $^ -o $@
 
 $(LUA_CLIB_PATH)/pb.so : 3rd/lua-protobuf/pb.c | $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) -I3rd/lua-protobuf $^ -o $@
+	$(CC) $(CFLAGS) $(SHARED) -I3rd/pb $^ -o $@
 
 clean :
 	rm -f $(SKYNET_BUILD_PATH)/skynet $(CSERVICE_PATH)/*.so $(LUA_CLIB_PATH)/*.so && \
