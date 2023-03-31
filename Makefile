@@ -130,7 +130,7 @@ $(LUA_CLIB_PATH)/serialize.so : 3rd/serialize/serialize.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/serialize $^ -o $@
 
 $(LUA_CLIB_PATH)/webclient.so : 3rd/lua-webclient/webclient.c | $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) -I3rd/lua-webclient/webclient $^ -o $@ -lcurl
+	$(CC) $(CFLAGS) $(SHARED) -I3rd/lua-webclient $^ -o $@ -lcurl
 
 $(LUA_CLIB_PATH)/snapshot.so : 3rd/lua-snapshot/snapshot.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/snapshot $^ -o $@
@@ -139,10 +139,10 @@ $(LUA_CLIB_PATH)/zint.so : $(addprefix 3rd/zint/,$(LUA_CLIB_ZINT)) | $(LUA_CLIB_
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/zint $^ -o $@ -lpng
 
 $(LUA_CLIB_PATH)/Ip2region.so : 3rd/ip2region/ip2region.c 3rd/ip2region/lua_ip2region.c | $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) -I3rd/ip2region/ip2region $^ -o $@
+	$(CC) $(CFLAGS) $(SHARED) -I3rd/ip2region $^ -o $@
 
 $(LUA_CLIB_PATH)/pb.so : 3rd/lua-protobuf/pb.c | $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) -I3rd/pb $^ -o $@
+	$(CC) $(CFLAGS) $(SHARED) -I3rd/lua-protobuf $^ -o $@
 
 clean :
 	rm -f $(SKYNET_BUILD_PATH)/skynet $(CSERVICE_PATH)/*.so $(LUA_CLIB_PATH)/*.so && \
